@@ -1,14 +1,29 @@
 const mysql = require("mysql2");
-require("dotenv").config();
 
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+// Load database configuration
+const config = require("./config/config.json")[
+  process.env.NODE_ENV || "development"
+];
+
+// Create MySQL connection
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST || "mysql-15ecfd54-esi-b3ed.e.aivencloud.com",
+  port: process.env.DB_PORT || 17785,
+  user: process.env.DB_USER || "avnadmin",
+  password: process.env.DB_PASSWORD || "AVNS_HeIj0FXeoPmepZrO4lA",
+  database: process.env.DB_NAME || "educare_db",
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
-module.exports = db.promise();
+// Connect to MySQL
+connection.connect((err) => {
+  if (err) {
+    console.error("❌ Error connecting to MySQL:", err);
+    return;
+  }
+  console.log("✅ Connected to Aiven MySQL database.");
+});
+
+module.exports = connection;
