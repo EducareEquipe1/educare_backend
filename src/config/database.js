@@ -2,7 +2,7 @@ const { Sequelize } = require("sequelize");
 const fs = require("fs");
 
 const sequelize = new Sequelize(
-  "educare_db",
+  "defaultdb",
   "avnadmin",
   "AVNS_HeIj0FXeoPmepZrO4lA",
   {

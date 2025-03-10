@@ -1,8 +1,7 @@
 const connection = require("../db"); // Adjusted path to the database connection
 
 const createTables = [
-  `
-CREATE TABLE IF NOT EXISTS Utilisateur (
+  `CREATE TABLE IF NOT EXISTS Utilisateur (
     id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE NOT NULL,
     last_name VARCHAR(100),
@@ -11,35 +10,35 @@ CREATE TABLE IF NOT EXISTS Utilisateur (
     is_active BOOLEAN DEFAULT TRUE,
     birth_date DATE,
     phone VARCHAR(15)
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS Role (
+  `CREATE TABLE IF NOT EXISTS \`Role\` (
     id_role INT PRIMARY KEY AUTO_INCREMENT,
     designation VARCHAR(100) NOT NULL UNIQUE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS permission (
+  `CREATE TABLE IF NOT EXISTS Permission (
     id_permission INT PRIMARY KEY AUTO_INCREMENT,
     designation VARCHAR(100) NOT NULL UNIQUE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS Utilisateur_Role (
+  `CREATE TABLE IF NOT EXISTS Utilisateur_Role (
     utilisateur_id INT,
     role_id INT,
     PRIMARY KEY (utilisateur_id, role_id),
     FOREIGN KEY (utilisateur_id) REFERENCES Utilisateur(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES Role(id_role) ON DELETE CASCADE
-);
+    FOREIGN KEY (role_id) REFERENCES \`Role\`(id_role) ON DELETE CASCADE
+  )`,
 
-CREATE TABLE IF NOT EXISTS Role_Permission (
+  `CREATE TABLE IF NOT EXISTS Role_Permission (
     role_id INT,
     permission_id INT,
     PRIMARY KEY (role_id, permission_id),
-    FOREIGN KEY (role_id) REFERENCES Role(id_role) ON DELETE CASCADE,
-    FOREIGN KEY (permission_id) REFERENCES permission(id_permission) ON DELETE CASCADE
-);
+    FOREIGN KEY (role_id) REFERENCES \`Role\`(id_role) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES Permission(id_permission) ON DELETE CASCADE
+  )`,
 
-CREATE TABLE IF NOT EXISTS Patient (
+  `CREATE TABLE IF NOT EXISTS Patient (
     id INT PRIMARY KEY,
     matricule INT UNIQUE NOT NULL,
     categorie VARCHAR(50),
@@ -47,59 +46,58 @@ CREATE TABLE IF NOT EXISTS Patient (
     blood_type CHAR(3),
     gender CHAR(10),
     FOREIGN KEY (id) REFERENCES Utilisateur(id) ON DELETE CASCADE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS Medcin (
+  `CREATE TABLE IF NOT EXISTS Medcin (
     id INT PRIMARY KEY,
     matricule INT UNIQUE NOT NULL,
     speciality VARCHAR(255) NOT NULL,
     FOREIGN KEY (id) REFERENCES Utilisateur(id) ON DELETE CASCADE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS Admin (
+  `CREATE TABLE IF NOT EXISTS Admin (
     id INT PRIMARY KEY,
     matricule INT UNIQUE NOT NULL,
     FOREIGN KEY (id) REFERENCES Utilisateur(id) ON DELETE CASCADE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS AssistantMedical (
+  `CREATE TABLE IF NOT EXISTS AssistantMedical (
     id INT PRIMARY KEY,
     matricule INT UNIQUE NOT NULL,
     FOREIGN KEY (id) REFERENCES Utilisateur(id) ON DELETE CASCADE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS Backup (
+  `CREATE TABLE IF NOT EXISTS Backup (
     id INT PRIMARY KEY AUTO_INCREMENT,
     backupFrequency INT,
     backupLocation VARCHAR(255),
     lastBackupDate DATE
-);
+  )`,
 
-CREATE TABLE IF NOT EXISTS AppParams (
+  `CREATE TABLE IF NOT EXISTS AppParams (
     id INT PRIMARY KEY AUTO_INCREMENT,
     logo BLOB,
     establishmentName VARCHAR(255),
     tauxTVA INT
-);
-`
+  )`,
 ];
 
 // Execute queries one by one
-createTables.forEach((query, index) => {
-  connection.query(query, (err) => {
-    if (err) {
-      console.error(`❌ Error creating table #${index + 1}:`, err);
-    } else {
+(async () => {
+  for (const [index, query] of createTables.entries()) {
+    try {
+      await connection.promise().query(query);
       console.log(`✅ Table #${index + 1} created successfully.`);
+    } catch (err) {
+      console.error(`❌ Error creating table #${index + 1}:`, err);
+    }
+  }
+
+  connection.end((err) => {
+    if (err) {
+      console.error("❌ Error closing connection:", err);
+    } else {
+      console.log("✅ Database setup complete.");
     }
   });
-});
-
-// Close connection after execution
-connection.end((err) => {
-  if (err) {
-    console.error("❌ Error closing connection:", err);
-  } else {
-    console.log("✅ Database setup complete.");
-  }
-});
+})();

@@ -2,7 +2,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const asyncHandler = require("express-async-handler");
+const db = require("../db"); // Adjusted path for the database connection
+
 const Patient = require("../models/authPatientModel");
+
 require("dotenv").config();
 
 const JWT_SECRET = "your_super_secret_key";
@@ -29,6 +32,7 @@ exports.registerPatient = asyncHandler(async (req, res) => {
   } = req.body;
 
   if (
+    !matricule ||
     !email ||
     !last_name ||
     !first_name ||
@@ -49,6 +53,11 @@ exports.registerPatient = asyncHandler(async (req, res) => {
   }
 
   const existingPatient = await Patient.findPatientByEmail(email);
+  if (!db) {
+    res.status(500);
+    throw new Error("Database connection is not established.");
+  }
+
   if (existingPatient) {
     res.status(400);
     throw new Error("Email already in use");
@@ -236,7 +245,9 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     Patient.changeUserPassword({
-        email, hashedPassword});
+      email,
+      hashedPassword,
+    });
   } catch (error) {
     res.status(400).json({ message: "Invalid or expired token" });
   }

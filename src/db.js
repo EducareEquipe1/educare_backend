@@ -7,11 +7,13 @@ const config = require("./config/config.json")[
 
 // Create MySQL connection
 const connection = mysql.createConnection({
+  // Added error handling for connection issues
+
   host: process.env.DB_HOST || "mysql-15ecfd54-esi-b3ed.e.aivencloud.com",
   port: process.env.DB_PORT || 17785,
   user: process.env.DB_USER || "avnadmin",
   password: process.env.DB_PASSWORD || "AVNS_HeIj0FXeoPmepZrO4lA",
-  database: process.env.DB_NAME || "educare_db",
+  database: process.env.DB_NAME || "defaultdb",
   ssl: {
     rejectUnauthorized: false,
   },
@@ -19,6 +21,11 @@ const connection = mysql.createConnection({
 
 // Connect to MySQL
 connection.connect((err) => {
+  if (err) {
+    console.error("❌ Error connecting to MySQL:", err);
+    return;
+  }
+
   if (err) {
     console.error("❌ Error connecting to MySQL:", err);
     return;

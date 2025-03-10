@@ -40,7 +40,7 @@ exports.createPatient = (patientData) => {
         `;
 
     const patientSql = `
-            INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);
+            INSERT INTO Patient (id, matricule) VALUES (?, ?);
         `;
 
     const values = [
@@ -77,7 +77,6 @@ exports.createPatient = (patientData) => {
 exports.changeUserPassword = (userData) => {
   return new Promise(async (resolve, reject) => {
     try {
-
       const query = "UPDATE Utilisateur SET password = ? WHERE email = ?";
       console.log(userData.email);
       connection.query(
