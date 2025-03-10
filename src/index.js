@@ -3,8 +3,7 @@ const app = express();
 const sequelize = require("./config/database");
 require("dotenv").config();
 const db = require("./db");
-
-// Added error handling for database connection
+const setupSwagger= require("./middlewares/swagger");
 
 // Import routes
 
@@ -13,19 +12,17 @@ const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
 
 app.use(express.json());
-
 // Use routes
 
 app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
 app.use("/administrateurs", administrateurRoutes);
 
-app.get("/", (req, res) => {
-  if (!db.connection._connectCalled) {
-    console.error("❌ Database connection is not established.");
-    return res.status(500).send("Database connection is not established.");
-  }
 
+setupSwagger(app);
+
+
+app.get("/", (req, res) => {
   db.query("SELECT NOW()", (err, results) => {
     if (err) {
       console.error("Database error:", err);

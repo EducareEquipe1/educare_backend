@@ -39,9 +39,10 @@ exports.createPatient = (patientData) => {
             VALUES (?, ?, ?, ?, ?, ?);
         `;
 
-    const patientSql = `
-            INSERT INTO Patient (id, matricule) VALUES (?, ?);
-        `;
+        const patientSql = `
+        INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);
+    `;
+    
 
     const values = [
       patientData.email,
