@@ -9,7 +9,7 @@ const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 // ✅ Send Email Verification
 exports.sendEmailVerification = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
-  const patient = await Patient.findPatientByEmail(email);
+  const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
     return next(new Error("Patient not found"));
@@ -34,7 +34,7 @@ exports.activateAccount = asyncHandler(async (req, res, next) => {
   const { token } = req.params;
 
   const { email } = jwt.verify(token, JWT_SECRET);
-  const patient = await Patient.findPatientByEmail(email);
+  const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
     return next(new Error("Patient not found"));

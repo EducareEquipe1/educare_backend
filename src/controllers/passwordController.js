@@ -9,7 +9,7 @@ const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 // ✅ Forgot Password
 exports.forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  const patient = await Patient.findPatientByEmail(email);
+  const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
     res.status(400);
@@ -18,7 +18,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const resetLink = `http://localhost:3000/patients/reset-password/${token}`;
-
+console.log(patient);
   await sendEmail(
     email,
     "Reset Password Request",
@@ -35,7 +35,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   const decoded = jwt.verify(token, JWT_SECRET);
   const email = decoded.email;
 
-  const patient = await Patient.findPatientByEmail(email);
+  const patient = await Patient.findUserByEmail(email);
   if (!patient) {
     res.status(404);
     throw new Error("Patient not found");
@@ -51,7 +51,7 @@ exports.setNewPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
   const decoded = jwt.verify(token, JWT_SECRET);
   const email = decoded.email;
-  const patient = await Patient.findPatientByEmail(email);
+  const patient = await Patient.findUserByEmailByEmail(email);
   if (!patient) {
     res.status(404);
     throw new Error("Patient not found");

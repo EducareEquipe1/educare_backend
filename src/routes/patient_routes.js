@@ -46,7 +46,7 @@ const router = express.Router();
  *       400:
  *         description: Bad request
  */
-router.post("/register", register);
+router.post("/register",(req, res) => register(req, res, "Patient"));
 
 /**
  * @swagger

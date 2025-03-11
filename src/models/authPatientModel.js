@@ -2,7 +2,7 @@ const connection = require("../db"); // Import the database connection
 const bcrypt = require("bcrypt");
 
 // ✅ Find Patient by Email
-exports.findPatientByEmail = async (email) => {
+exports.findUserByEmail = async (email) => {
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Utilisateur WHERE email = ?";
     connection.query(sql, [email], (err, results) => {
@@ -32,17 +32,12 @@ exports.updatePatientActivation = async (email) => {
 };
 
 // ✅ Create a new patient (Register Patient)
-exports.createPatient = (patientData) => {
+exports.createPatient = (patientData, userType) => {
   return new Promise((resolve, reject) => {
     const userSql = `
-            INSERT INTO Utilisateur (email, last_name, first_name, password, birth_date, phone)
-            VALUES (?, ?, ?, ?, ?, ?);
-        `;
-
-        const patientSql = `
-        INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);
+      INSERT INTO Utilisateur (email, last_name, first_name, password, birth_date, phone)
+      VALUES (?, ?, ?, ?, ?, ?);
     `;
-    
 
     const values = [
       patientData.email,
@@ -57,23 +52,30 @@ exports.createPatient = (patientData) => {
       if (err) return reject(err);
 
       const utilisateurId = result.insertId;
-      const matricule = patientData.matricule || null;
+      let userTypeSql;
+      let typeValues;
 
-      connection.query(
-        patientSql,
-        [utilisateurId, matricule],
-        (err, patientResult) => {
-          if (err) return reject(err);
-          resolve({
-            utilisateurId,
-            patientId: patientResult.insertId,
-            matricule,
-          });
-        }
-      );
+      if (userType === "Patient") {
+        userTypeSql = `INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);`;
+        typeValues = [utilisateurId, patientData.matricule || null];
+      } else if (userType === "Medecin") {
+        userTypeSql = `INSERT INTO Medecin (utilisateur_id, matricule) VALUES (?, ?);`;
+        typeValues = [utilisateurId, patientData.matricule || null];
+      } else {
+        return reject(new Error("Invalid userType"));
+      }
+
+      connection.query(userTypeSql, typeValues, (err, result) => {
+        if (err) return reject(err);
+        resolve({
+          utilisateurId,
+          userTypeId: result.insertId,
+        });
+      });
     });
   });
 };
+
 
 exports.changeUserPassword = (userData) => {
   return new Promise(async (resolve, reject) => {
