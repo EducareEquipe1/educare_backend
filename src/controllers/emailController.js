@@ -21,7 +21,7 @@ exports.sendEmailVerification = asyncHandler(async (req, res, next) => {
   await sendEmail(
     email,
     "Email Verification",
-    `Dear ${patient.first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
+    `Dear ${patient.first_name},\n\nPlease verify your account by clicking the link below:\n\n ${activationLink}\n\nBest regards,`
   );
 
   res

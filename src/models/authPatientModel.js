@@ -61,7 +61,11 @@ exports.createPatient = (patientData, userType) => {
       } else if (userType === "Medecin") {
         userTypeSql = `INSERT INTO Medecin (utilisateur_id, matricule) VALUES (?, ?);`;
         typeValues = [utilisateurId, patientData.matricule || null];
-      } else {
+      } else if (userType === "Admin") {
+        userTypeSql = `INSERT INTO Admin (utilisateur_id, matricule) VALUES (?, ?);`;
+        typeValues = [utilisateurId, patientData.matricule || null];
+      }
+       else {
         return reject(new Error("Invalid userType"));
       }
 

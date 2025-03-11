@@ -3,7 +3,8 @@ const app = express();
 const sequelize = require("./config/database");
 require("dotenv").config();
 const db = require("./db");
-const setupSwagger= require("./middlewares/swagger");
+const setupSwagger = require("./middlewares/swagger");
+const cors = require("cors");
 
 // Import routes
 
@@ -11,6 +12,7 @@ const patientRoutes = require("./routes/patient_routes");
 const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
 
+app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 // Use routes
 
@@ -18,9 +20,7 @@ app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
 app.use("/administrateurs", administrateurRoutes);
 
-
 setupSwagger(app);
-
 
 app.get("/", (req, res) => {
   db.query("SELECT NOW()", (err, results) => {
