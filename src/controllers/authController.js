@@ -55,23 +55,22 @@ exports.register = asyncHandler(async (req, res, userType) => {
     },
     userType
   );
-const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
+  const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `http://localhost:3000/patients/activate/${token}`;
-  if (userType == "Patient"){
+  if (userType == "Patient") {
     await sendEmail(
       email,
       "Email Verification",
       `Dear ${newPatient.first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
     );
-    message = "User registered successfully. Please check your email for activation.";
-  }else{
+    message =
+      "User registered successfully. Please check your email for activation.";
+  } else {
     message = "User registered successfully. ";
   }
-   
 
   res.status(201).json({
-    message:
-      message,
+    message: message,
     patientId: newPatient.patientId,
     matricule: newPatient.matricule,
   });
@@ -105,6 +104,7 @@ exports.login = asyncHandler(async (req, res) => {
       first_name: patient.first_name,
       last_name: patient.last_name,
       email: patient.email,
+      is_active: patient.is_active,
     },
   });
 });
