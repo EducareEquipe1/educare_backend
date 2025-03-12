@@ -12,9 +12,12 @@ exports.sendEmailVerification = asyncHandler(async (req, res, next) => {
   const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
-    return next(new Error("Patient not found"));
+    return res.status(400).json({ error: "Patient not found" });
   }
 
+  if (patient.is_active == true) {
+    return res.status(400).json({ error: "the account is already activated" });
+  }
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `http://localhost:3000/patients/activate/${token}`;
 
@@ -33,17 +36,21 @@ exports.sendEmailVerification = asyncHandler(async (req, res, next) => {
 exports.activateAccount = asyncHandler(async (req, res, next) => {
   const { token } = req.params;
 
-  const { email } = jwt.verify(token, JWT_SECRET);
-  const patient = await Patient.findUserByEmail(email);
+  try {
+    const { email } = jwt.verify(token, JWT_SECRET);
+    const patient = await Patient.findUserByEmail(email);
 
-  if (!patient) {
-    return next(new Error("Patient not found"));
+    if (!patient) {
+      return res.status(400).json({ error: "Patient not found" });
+    }
+
+    if (patient.isActivated) {
+      return res.status(400).json({ error: "Account already activated" });
+    }
+
+    await Patient.updatePatientActivation(email);
+    res.status(200).json({ message: "Account activated successfully" });
+  } catch (error) {
+    res.status(400).json({ error: "Invalid or expired token" });
   }
-
-  if (patient.isActivated) {
-    return next(new Error("Account already activated"));
-  }
-
-  await Patient.updatePatientActivation(email);
-  res.status(200).json({ message: "Account activated successfully" });
 });

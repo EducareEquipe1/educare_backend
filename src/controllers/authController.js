@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const Patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const sendEmail = require("../utils/emailService");
+const validator = require("validator");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 
@@ -13,12 +14,10 @@ exports.register = asyncHandler(async (req, res, userType) => {
     last_name,
     email,
     password,
-    matricule,
     birth_date,
     phone,
   } = req.body;
   if (
-    !matricule ||
     !email ||
     !last_name ||
     !first_name ||
@@ -26,20 +25,19 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !birth_date ||
     !phone
   ) {
-    res.status(400);
-    throw new Error("All fields are required");
+    return res.status(400).json({ error: "All fields are required" });
   }
   const isValidEmail = (email) => {
     return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
   };
-  if (!isValidEmail) {
-    res.status(400);
-    throw new Error("Email should be in the right format name@esi-sba.dz");
+  if (!isValidEmail(email)) {
+    return res
+      .status(400)
+      .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
   const existingPatient = await Patient.findUserByEmail(email);
   if (existingPatient) {
-    res.status(400);
-    throw new Error("Patient already exists");
+    return res.status(400).json({ error: "Patient already exists" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -49,7 +47,6 @@ exports.register = asyncHandler(async (req, res, userType) => {
       last_name,
       email,
       password: hashedPassword,
-      matricule,
       birth_date,
       phone,
     },
@@ -57,6 +54,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
   );
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `http://localhost:3000/patients/activate/${token}`;
+  let message;
   if (userType == "Patient") {
     await sendEmail(
       email,
@@ -66,7 +64,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     message =
       "User registered successfully. Please check your email for activation.";
   } else {
-    message = "User registered successfully. ";
+    message = "User registered successfully.";
   }
 
   res.status(201).json({
@@ -82,14 +80,12 @@ exports.login = asyncHandler(async (req, res) => {
 
   const patient = await Patient.findUserByEmail(email);
   if (!patient) {
-    res.status(401);
-    throw new Error("Invalid email or password");
+    return res.status(401).json({ error: "Invalid email or password" });
   }
 
   const isMatch = await bcrypt.compare(password, patient.password);
   if (!isMatch) {
-    res.status(401);
-    throw new Error("Invalid email or password");
+    return res.status(401).json({ error: "Invalid email or password" });
   }
 
   const token = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, {
@@ -109,12 +105,20 @@ exports.login = asyncHandler(async (req, res) => {
   });
 });
 
+exports.getActivePatients = async (req, res) => {
+  try {
+    const activePatients = await Patient.getActivePatients();
+    res.json(activePatients);
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong!" });
+  }
+};
+
 // ✅ Get Current Patient Info
 exports.getPatientProfile = asyncHandler(async (req, res) => {
   const patient = await Patient.findById(req.user.id);
   if (!patient) {
-    res.status(404);
-    throw new Error("Patient not found");
+    return res.status(404).json({ error: "Patient not found" });
   }
 
   res.status(200).json({

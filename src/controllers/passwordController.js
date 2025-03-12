@@ -12,13 +12,12 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
-    res.status(400);
-    throw new Error("Patient not found");
+    return res.status(400).json({ error: "Patient not found" });
   }
 
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const resetLink = `http://localhost:3000/patients/reset-password/${token}`;
-console.log(patient);
+  console.log(patient);
   await sendEmail(
     email,
     "Reset Password Request",
@@ -28,38 +27,42 @@ console.log(patient);
   res.status(200).json({ message: "Password reset email sent successfully." });
 });
 
-// ✅ Reset Password get methode
+// ✅ Reset Password GET method
 exports.resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
 
-  const decoded = jwt.verify(token, JWT_SECRET);
-  const email = decoded.email;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = decoded.email;
+    const patient = await Patient.findUserByEmail(email);
+    
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
 
-  const patient = await Patient.findUserByEmail(email);
-  if (!patient) {
-    res.status(404);
-    throw new Error("Patient not found");
+    res.status(200).json({ message: "Token is valid, user can reset password" });
+  } catch (error) {
+    res.status(400).json({ error: "Invalid or expired token" });
   }
-
-
-  res.status(200).json({ message: "Token is valid, user can reset password"})
 });
 
-
-//post methode 
+// ✅ Set New Password (POST method)
 exports.setNewPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
-  const decoded = jwt.verify(token, JWT_SECRET);
-  const email = decoded.email;
-  const patient = await Patient.findUserByEmailByEmail(email);
-  if (!patient) {
-    res.status(404);
-    throw new Error("Patient not found");
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = decoded.email;
+    const patient = await Patient.findUserByEmail(email);
+    
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await Patient.changeUserPassword({ email, hashedPassword });
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    res.status(400).json({ error: "Invalid or expired token" });
   }
-
-
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await Patient.changeUserPassword({ email, hashedPassword });
-  res.status(200).json({ message: "Password updated successfully." });
-
-})
+});

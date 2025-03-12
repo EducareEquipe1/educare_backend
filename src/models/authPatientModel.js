@@ -56,14 +56,14 @@ exports.createPatient = (patientData, userType) => {
       let typeValues;
 
       if (userType === "Patient") {
-        userTypeSql = `INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);`;
-        typeValues = [utilisateurId, patientData.matricule || null];
+        userTypeSql = `INSERT INTO Patient (utilisateur_id) VALUES (?);`;
+        typeValues = [utilisateurId];
       } else if (userType === "Medecin") {
-        userTypeSql = `INSERT INTO Medecin (utilisateur_id, matricule) VALUES (?, ?);`;
-        typeValues = [utilisateurId, patientData.matricule || null];
+        userTypeSql = `INSERT INTO Medecin (utilisateur_id) VALUES (?);`;
+        typeValues = [utilisateurId];
       } else if (userType === "Admin") {
-        userTypeSql = `INSERT INTO Admin (utilisateur_id, matricule) VALUES (?, ?);`;
-        typeValues = [utilisateurId, patientData.matricule || null];
+        userTypeSql = `INSERT INTO Admin (utilisateur_id) VALUES (?);`;
+        typeValues = [utilisateurId];
       }
        else {
         return reject(new Error("Invalid userType"));
@@ -102,5 +102,27 @@ exports.changeUserPassword = (userData) => {
     } catch (error) {
       reject(error);
     }
+  });
+};
+
+
+exports.getActivePatients = async () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT p.*, u.email, u.last_name, u.first_name, u.birth_date, u.phone
+      FROM Patient p
+      JOIN Utilisateur u ON p.utilisateur_id = u.id
+      WHERE u.is_active = 1
+    `;
+
+    connection.query(sql, (err, results) => {
+      if (err) {
+        
+        reject(err);
+      } else {
+        resolve(results);
+        console.log("im here");
+      }
+    });
   });
 };
