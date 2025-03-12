@@ -14,9 +14,10 @@ const administrateurRoutes = require("./routes/administrateur_routes");
 
 app.use(
   cors({
-    origin: "*", // Allow any domain
-    methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
+    origin: "*", // Change this to your frontend URL for better security
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
 );
 app.use(express.json());
@@ -41,6 +42,9 @@ app.get("/", (req, res) => {
 
 // Test database connection
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+const PORT = process.env.PORT || 3000;  // Use Render's assigned port or default to 3000 locally
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
+
