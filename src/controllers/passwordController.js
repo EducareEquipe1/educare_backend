@@ -41,7 +41,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     // ✅ Send a response with the reset link
     res.status(200).json({
       message: "Token is valid, redirecting to reset password page.",
-      resetLink: `http://localhost:3000/resetPassword/${token}`,
+      resetLink: `http://http://localhost:5173/resetPassword/${token}`,
     });
   } catch (error) {
     res.status(400).json({ error: "Invalid or expired token" });
