@@ -16,7 +16,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   }
 
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
-  const resetLink = `http://localhost:5173/patients/reset-password/${token}`;
+  const resetLink = `http://localhost:5173/resetPassword/${token}`;
   console.log(patient);
   await sendEmail(
     email,
