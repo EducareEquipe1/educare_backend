@@ -29,18 +29,20 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
 // ✅ Reset Password GET method
 exports.resetPassword = asyncHandler(async (req, res) => {
-  const { token } = req.params;
-
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const email = decoded.email;
     const patient = await Patient.findUserByEmail(email);
-    
+
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
 
-    res.status(200).json({ message: "Token is valid, user can reset password" });
+    // ✅ Send a response with the reset link
+    res.status(200).json({
+      message: "Token is valid, redirecting to reset password page.",
+      resetLink: `http://localhost:3000/resetPassword/${token}`,
+    });
   } catch (error) {
     res.status(400).json({ error: "Invalid or expired token" });
   }
@@ -54,7 +56,7 @@ exports.setNewPassword = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const email = decoded.email;
     const patient = await Patient.findUserByEmail(email);
-    
+
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
