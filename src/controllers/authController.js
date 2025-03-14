@@ -16,6 +16,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     password,
     birth_date,
     phone,
+    matricule
   } = req.body;
   if (
     !email ||
@@ -23,7 +24,8 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !first_name ||
     !password ||
     !birth_date ||
-    !phone
+    !phone||
+    !matricule
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
@@ -48,7 +50,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
       email,
       password: hashedPassword,
       birth_date,
-      phone,
+      phone,matricule
     },
     userType
   );
