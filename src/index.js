@@ -25,7 +25,7 @@ app.use(express.json());
 
 app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
-app.use("/administrateurs", administrateurRoutes);
+app.use("/admin", administrateurRoutes);
 
 setupSwagger(app);
 

@@ -27,27 +27,6 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Password reset email sent successfully." });
 });
 
-// ✅ Reset Password GET method
-exports.resetPassword = asyncHandler(async (req, res) => {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const email = decoded.email;
-    const patient = await Patient.findUserByEmail(email);
-
-    if (!patient) {
-      return res.status(404).json({ error: "Patient not found" });
-    }
-
-    // ✅ Send a response with the reset link
-    res.status(200).json({
-      message: "Token is valid, redirecting to reset password page.",
-      resetLink: `http://localhost:5173/resetPassword/${token}`,
-    });
-  } catch (error) {
-    res.status(400).json({ error: "Invalid or expired token" });
-  }
-});
-
 // ✅ Set New Password (POST method)
 exports.setNewPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;

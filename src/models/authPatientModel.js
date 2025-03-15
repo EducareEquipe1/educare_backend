@@ -36,10 +36,12 @@ exports.createPatient = (patientData, userType) => {
   return new Promise((resolve, reject) => {
     connection.beginTransaction((err) => {
       if (err) return reject(err);
+      const is_active =
+        userType === "Admin" || userType === "Medecin" ? true : false;
 
       const userSql = `
-        INSERT INTO Utilisateur (email, last_name, first_name, password, birth_date, phone)
-        VALUES (?, ?, ?, ?, ?, ?);
+        INSERT INTO Utilisateur (email, last_name, first_name, password, birth_date, phone , is_active)
+        VALUES (?, ?, ?, ?, ?, ? , ?);
       `;
 
       const values = [
@@ -49,6 +51,7 @@ exports.createPatient = (patientData, userType) => {
         patientData.password,
         patientData.birth_date,
         patientData.phone,
+        is_active,
       ];
 
       connection.query(userSql, values, (err, result) => {
@@ -122,7 +125,7 @@ exports.changeUserPassword = (userData) => {
 exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.*, u.email, u.last_name, u.first_name, u.birth_date, u.phone
+      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
       WHERE u.is_active = 1
@@ -134,6 +137,82 @@ exports.getActivePatients = async () => {
       } else {
         resolve(results);
         console.log("im here");
+      }
+    });
+  });
+};
+
+exports.getAllPatients = async () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name
+      FROM Patient p
+      JOIN Utilisateur u ON p.utilisateur_id = u.id
+     
+    `;
+
+    connection.query(sql, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+        console.log("im here");
+      }
+    });
+  });
+};
+
+exports.getAllMedecins = async () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT m.state ,m.role, u.email, u.last_name, u.first_name
+      FROM Medecin m
+      JOIN Utilisateur u ON m.utilisateur_id = u.id
+     
+    `;
+
+    connection.query(sql, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+        console.log("im here");
+      }
+    });
+  });
+};
+
+exports.deleteUserByEmail = async (email) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      DELETE FROM Medecin WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
+      DELETE FROM Patient WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
+      DELETE FROM Utilisateur WHERE email = ?;
+    `;
+
+    connection.query(sql, [email, email, email], (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+};
+
+exports.editMedecinStateByEmail = async (email) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE Medecin 
+      SET state = NOT state 
+      WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
+    `;
+
+    connection.query(sql, [email], (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result.affectedRows > 0);
       }
     });
   });

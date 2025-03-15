@@ -1,0 +1,20 @@
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Patient = require("../models/authPatientModel");
+const asyncHandler = require("../middlewares/asyncHandler");
+
+
+exports.getActivePatients = asyncHandler(async (req, res) => {
+  const activePatients = await Patient.getActivePatients();
+  res.json(activePatients);
+});
+
+exports.getAllPatients = asyncHandler(async (req, res) => {
+  const allPatients = await Patient.getAllPatients();
+  res.json(allPatients);
+});
+
+exports.getAllMedecins = asyncHandler(async (req, res) => {
+  const allMedecins = await Patient.getAllMedecins();
+  res.json(allMedecins);
+});

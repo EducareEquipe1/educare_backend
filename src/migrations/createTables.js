@@ -7,7 +7,7 @@ const createTables = [
     last_name VARCHAR(100),
     first_name VARCHAR(100),
     password VARCHAR(255) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT FAULSE,
     birth_date DATE,
     phone VARCHAR(15)
   )`,
