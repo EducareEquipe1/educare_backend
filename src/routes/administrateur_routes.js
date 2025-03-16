@@ -25,7 +25,6 @@ router.put("/edit-medecin-state/:email", authMiddleware, adminMiddleware, editMe
 
 
 
-module.exports = router;
 
 
 

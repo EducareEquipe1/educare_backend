@@ -11,6 +11,8 @@ const cors = require("cors");
 const patientRoutes = require("./routes/patient_routes");
 const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
+const directeurRoutes = require("./routes/directeur_routes");
+
 
 app.use(
   cors({
@@ -26,6 +28,8 @@ app.use(express.json());
 app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
 app.use("/admin", administrateurRoutes);
+app.use("/directeur", directeurRoutes);
+
 
 setupSwagger(app);
 

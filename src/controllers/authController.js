@@ -80,7 +80,14 @@ exports.register = asyncHandler(async (req, res, userType) => {
 // ✅ Login Patient
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
+  const isValidEmail = (email) => {
+    return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
+  };
+  if (!isValidEmail(email)) {
+    return res
+      .status(400)
+      .json({ error: "Email should be in the right format name@esi-sba.dz" });
+  }
   const patient = await Patient.findUserByEmail(email);
   if (!patient) {
     return res.status(401).json({ error: "Invalid email or password" });

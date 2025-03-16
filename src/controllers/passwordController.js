@@ -9,6 +9,14 @@ const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 // ✅ Forgot Password
 exports.forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
+   const isValidEmail = (email) => {
+      return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
+    };
+    if (!isValidEmail(email)) {
+      return res
+        .status(400)
+        .json({ error: "Email should be in the right format name@esi-sba.dz" });
+    }
   const patient = await Patient.findUserByEmail(email);
 
   if (!patient) {
