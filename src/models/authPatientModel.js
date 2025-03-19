@@ -53,6 +53,8 @@ exports.createPatient = (patientData, userType) => {
         patientData.phone,
         is_active,
       ];
+      console.log(values);
+      console.log(userType);
 
       connection.query(userSql, values, (err, result) => {
         if (err) {
@@ -62,6 +64,7 @@ exports.createPatient = (patientData, userType) => {
         const utilisateurId = result.insertId;
         let userTypeSql;
         let typeValues;
+        console.log(utilisateurId);
 
         if (userType === "Patient") {
           userTypeSql = `INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);`;
@@ -71,15 +74,14 @@ exports.createPatient = (patientData, userType) => {
           userTypeSql = `INSERT INTO Admin (utilisateur_id, matricule) VALUES (?, ?);`;
         } else if (userType === "Directeur") {
           userTypeSql = `INSERT INTO Directeur (utilisateur_id, matricule) VALUES (?, ?);`;
-        } 
-        else {
+        } else {
           return connection.rollback(() =>
             reject(new Error("Invalid userType"))
           );
         }
 
         typeValues = [utilisateurId, patientData.matricule]; // `matricule` is stored in these tables
-
+        console.log(typeValues);
         connection.query(userTypeSql, typeValues, (err, result) => {
           if (err) {
             return connection.rollback(() => reject(err));
@@ -187,17 +189,65 @@ exports.getAllMedecins = async () => {
 
 exports.deleteUserByEmail = async (email) => {
   return new Promise((resolve, reject) => {
-    const sql = `
-      DELETE FROM Medecin WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
-      DELETE FROM Patient WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
-      DELETE FROM Utilisateur WHERE email = ?;
-    `;
+    connection.beginTransaction(async (err) => {
+      if (err) return reject(err);
 
-    connection.query(sql, [email, email, email], (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(true);
+      try {
+        // Find the user ID first
+        const [user] = await new Promise((resolve, reject) => {
+          connection.query(
+            "SELECT id FROM Utilisateur WHERE email = ?",
+            [email],
+            (err, results) => {
+              if (err) reject(err);
+              else resolve(results);
+            }
+          );
+        });
+
+        if (!user) {
+          return connection.rollback(() =>
+            reject(new Error("User not found."))
+          );
+        }
+
+        const userId = user.id;
+
+        // Delete from related tables
+        await new Promise((resolve, reject) => {
+          connection.query(
+            "DELETE FROM Medecin WHERE utilisateur_id = ?",
+            [userId],
+            (err) => (err ? reject(err) : resolve())
+          );
+        });
+
+        await new Promise((resolve, reject) => {
+          connection.query(
+            "DELETE FROM Patient WHERE utilisateur_id = ?",
+            [userId],
+            (err) => (err ? reject(err) : resolve())
+          );
+        });
+
+        // Delete from Utilisateur
+        await new Promise((resolve, reject) => {
+          connection.query(
+            "DELETE FROM Utilisateur WHERE id = ?",
+            [userId],
+            (err) => (err ? reject(err) : resolve())
+          );
+        });
+
+        // Commit transaction
+        connection.commit((err) => {
+          if (err) {
+            return connection.rollback(() => reject(err));
+          }
+          resolve(true);
+        });
+      } catch (error) {
+        connection.rollback(() => reject(error));
       }
     });
   });
