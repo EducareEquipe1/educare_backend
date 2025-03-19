@@ -56,7 +56,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     userType
   );
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
-  const activationLink = `http://localhost:3000/patients/activate/${token}`;
+  const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
   let message;
   if (userType == "Patient") {
     await sendEmail(

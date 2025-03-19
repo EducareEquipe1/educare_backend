@@ -19,7 +19,7 @@ exports.sendEmailVerification = asyncHandler(async (req, res, next) => {
     return res.status(400).json({ error: "the account is already activated" });
   }
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
-  const activationLink = `http://localhost:3000/patients/activate/${token}`;
+  const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
 
   await sendEmail(
     email,

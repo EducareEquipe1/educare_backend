@@ -1,5 +1,6 @@
 const connection = require("../db"); // Import the database connection
 const bcrypt = require("bcrypt");
+const util = require("util");
 
 // ✅ Find Patient by Email
 exports.findUserByEmail = async (email) => {
@@ -188,68 +189,42 @@ exports.getAllMedecins = async () => {
 };
 
 exports.deleteUserByEmail = async (email) => {
-  return new Promise((resolve, reject) => {
-    connection.beginTransaction(async (err) => {
-      if (err) return reject(err);
-
-      try {
-        // Find the user ID first
-        const [user] = await new Promise((resolve, reject) => {
-          connection.query(
-            "SELECT id FROM Utilisateur WHERE email = ?",
-            [email],
-            (err, results) => {
-              if (err) reject(err);
-              else resolve(results);
-            }
-          );
-        });
-
-        if (!user) {
-          return connection.rollback(() =>
-            reject(new Error("User not found."))
-          );
-        }
-
-        const userId = user.id;
-
-        // Delete from related tables
-        await new Promise((resolve, reject) => {
-          connection.query(
-            "DELETE FROM Medecin WHERE utilisateur_id = ?",
-            [userId],
-            (err) => (err ? reject(err) : resolve())
-          );
-        });
-
-        await new Promise((resolve, reject) => {
-          connection.query(
-            "DELETE FROM Patient WHERE utilisateur_id = ?",
-            [userId],
-            (err) => (err ? reject(err) : resolve())
-          );
-        });
-
-        // Delete from Utilisateur
-        await new Promise((resolve, reject) => {
-          connection.query(
-            "DELETE FROM Utilisateur WHERE id = ?",
-            [userId],
-            (err) => (err ? reject(err) : resolve())
-          );
-        });
-
-        // Commit transaction
-        connection.commit((err) => {
-          if (err) {
-            return connection.rollback(() => reject(err));
-          }
-          resolve(true);
-        });
-      } catch (error) {
-        connection.rollback(() => reject(error));
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Open MySQL connection
+      if (!connection || connection.state === "disconnected") {
+        return reject(new Error("Database connection is closed."));
       }
-    });
+
+      // Promisify queries
+      const query = util.promisify(connection.query).bind(connection);
+
+      // Start transaction
+      await query("START TRANSACTION");
+
+      // Get user ID
+      const [user] = await query("SELECT id FROM Utilisateur WHERE email = ?", [email]);
+      if (!user) {
+        await query("ROLLBACK");
+        return reject(new Error("User not found."));
+      }
+
+      const userId = user.id;
+
+      // Delete from related tables
+      await query("DELETE FROM Medecin WHERE utilisateur_id = ?", [userId]);
+      await query("DELETE FROM Patient WHERE utilisateur_id = ?", [userId]);
+
+      // Delete from Utilisateur
+      await query("DELETE FROM Utilisateur WHERE id = ?", [userId]);
+
+      // Commit transaction
+      await query("COMMIT");
+      resolve(true);
+    } catch (error) {
+      await query("ROLLBACK");
+      reject(error);
+    }
   });
 };
 
