@@ -62,7 +62,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     await sendEmail(
       email,
       "Email Verification",
-      `Dear ${newPatient.first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
+      `Dear ${first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
     );
     message =
       "User registered successfully. Please check your email for activation.";
