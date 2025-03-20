@@ -131,7 +131,7 @@ exports.changeUserPassword = (userData) => {
 exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name
+      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name p.is_active
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
       WHERE u.is_active = 1
@@ -151,7 +151,7 @@ exports.getActivePatients = async () => {
 exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name
+      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name , u.is_active
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
      
@@ -203,7 +203,9 @@ exports.deleteUserByEmail = async (email) => {
       await query("START TRANSACTION");
 
       // Get user ID
-      const [user] = await query("SELECT id FROM Utilisateur WHERE email = ?", [email]);
+      const [user] = await query("SELECT id FROM Utilisateur WHERE email = ?", [
+        email,
+      ]);
       if (!user) {
         await query("ROLLBACK");
         return reject(new Error("User not found."));
