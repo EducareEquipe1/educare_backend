@@ -45,12 +45,12 @@ exports.register = asyncHandler(async (req, res, userType) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const newPatient = await Patient.createPatient(
     {
-      prenom:first_name,
-      nom:last_name,
+      prenom: first_name,
+      nom: last_name,
       email,
       password: hashedPassword,
-      date_naissance:birth_date,
-      num_tel:phone,
+      date_naissance: birth_date,
+      num_tel: phone,
       matricule,
     },
     userType
@@ -107,10 +107,8 @@ exports.login = asyncHandler(async (req, res) => {
     token,
     patient: {
       id: patient.id,
-      first_name: patient.first_name,
-      last_name: patient.last_name,
       email: patient.email,
-      is_active: patient.is_active,
+      verified: patient.verified,
     },
   });
 });
