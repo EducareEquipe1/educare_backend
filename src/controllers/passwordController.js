@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/emailService");
 const asyncHandler = require("../middlewares/asyncHandler");
 const Patient = require("../models/authPatientModel");
+const validator = require("validator");
+
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 

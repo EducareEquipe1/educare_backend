@@ -1,5 +1,9 @@
 const express = require("express");
-const { register, login ,getActivePatients } = require("../controllers/authController");
+const {
+  register,
+  login,
+  getActivePatients,
+} = require("../controllers/authController");
 const {
   sendEmailVerification,
   activateAccount,
@@ -9,6 +13,9 @@ const {
   resetPassword,
   setNewPassword,
 } = require("../controllers/passwordController");
+const {
+  modifyProfileInformations,
+} = require("../controllers/modifyProfileController");
 
 const router = express.Router();
 
@@ -18,5 +25,6 @@ router.post("/send-email-verification", sendEmailVerification);
 router.get("/activate/:token", activateAccount);
 router.post("/forgot-password", forgotPassword);
 router.post("/set-new-password", setNewPassword);
+router.put("/modify-profile/:email", modifyProfileInformations);
 
 module.exports = router;

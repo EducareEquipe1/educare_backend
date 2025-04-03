@@ -37,23 +37,15 @@ exports.createPatient = (patientData, userType) => {
   return new Promise((resolve, reject) => {
     connection.beginTransaction((err) => {
       if (err) return reject(err);
-      const is_active =
+      const verified =
         userType === "Admin" || userType === "Medecin" ? true : false;
 
       const userSql = `
-        INSERT INTO Utilisateur (email, last_name, first_name, password, birth_date, phone , is_active)
-        VALUES (?, ?, ?, ?, ?, ? , ?);
+        INSERT INTO Utilisateur (email, password, verified)
+        VALUES (?, ?, ?);
       `;
 
-      const values = [
-        patientData.email,
-        patientData.last_name,
-        patientData.first_name,
-        patientData.password,
-        patientData.birth_date,
-        patientData.phone,
-        is_active,
-      ];
+      const values = [patientData.email, patientData.password, verified];
       console.log(values);
       console.log(userType);
 
@@ -68,20 +60,56 @@ exports.createPatient = (patientData, userType) => {
         console.log(utilisateurId);
 
         if (userType === "Patient") {
-          userTypeSql = `INSERT INTO Patient (utilisateur_id, matricule) VALUES (?, ?);`;
+          userTypeSql = `
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
+            VALUES (?, ?, ?, ?, ?, ?);
+          `;
+          typeValues = [
+            utilisateurId,
+            patientData.matricule,
+            patientData.nom,
+            patientData.prenom,
+            patientData.date_naissance,
+            patientData.num_tel,
+          ];
         } else if (userType === "Medecin") {
-          userTypeSql = `INSERT INTO Medecin (utilisateur_id, matricule) VALUES (?, ?);`;
+          userTypeSql = `
+            INSERT INTO Medecin (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
+            VALUES (?, ?, ?, ?, ?, ?);
+          `;
+          typeValues = [
+            utilisateurId,
+            patientData.matricule,
+            patientData.nom,
+            patientData.prenom,
+            patientData.date_naissance,
+            patientData.num_tel,
+          ];
         } else if (userType === "Admin") {
-          userTypeSql = `INSERT INTO Admin (utilisateur_id, matricule) VALUES (?, ?);`;
+          userTypeSql = `
+            INSERT INTO Admin (utilisateur_id) 
+            VALUES (?);
+          `;
+          typeValues = [utilisateurId];
         } else if (userType === "Directeur") {
-          userTypeSql = `INSERT INTO Directeur (utilisateur_id, matricule) VALUES (?, ?);`;
+          userTypeSql = `
+            INSERT INTO Directeur (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
+            VALUES (?, ?, ?, ?, ?, ?);
+          `;
+          typeValues = [
+            utilisateurId,
+            patientData.matricule,
+            patientData.nom,
+            patientData.prenom,
+            patientData.date_naissance,
+            patientData.num_tel,
+          ];
         } else {
           return connection.rollback(() =>
             reject(new Error("Invalid userType"))
           );
         }
 
-        typeValues = [utilisateurId, patientData.matricule]; // `matricule` is stored in these tables
         console.log(typeValues);
         connection.query(userTypeSql, typeValues, (err, result) => {
           if (err) {
@@ -131,10 +159,10 @@ exports.changeUserPassword = (userData) => {
 exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name p.is_active
+      SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
-      WHERE u.is_active = 1
+      WHERE u.verified = 1
     `;
 
     connection.query(sql, (err, results) => {
@@ -142,7 +170,6 @@ exports.getActivePatients = async () => {
         reject(err);
       } else {
         resolve(results);
-        console.log("im here");
       }
     });
   });
@@ -151,10 +178,10 @@ exports.getActivePatients = async () => {
 exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule ,p.role, u.email, u.last_name, u.first_name , u.is_active
+     SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
-     
+      
     `;
 
     connection.query(sql, (err, results) => {
@@ -162,7 +189,6 @@ exports.getAllPatients = async () => {
         reject(err);
       } else {
         resolve(results);
-        console.log("im here");
       }
     });
   });
@@ -171,7 +197,7 @@ exports.getAllPatients = async () => {
 exports.getAllMedecins = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT m.state ,m.role, u.email, u.last_name, u.first_name
+      SELECT m.archive , u.email, m.nom, m.prenom
       FROM Medecin m
       JOIN Utilisateur u ON m.utilisateur_id = u.id
      
@@ -188,6 +214,8 @@ exports.getAllMedecins = async () => {
   });
 };
 
+
+//we shouldnt work wit this right now
 exports.deleteUserByEmail = async (email) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -230,11 +258,11 @@ exports.deleteUserByEmail = async (email) => {
   });
 };
 
-exports.editMedecinStateByEmail = async (email) => {
+exports.editMedecinsarchiveByEmail = async (email) => {
   return new Promise((resolve, reject) => {
     const sql = `
       UPDATE Medecin 
-      SET state = NOT state 
+      SET archive = NOT state 
       WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
     `;
 
@@ -245,5 +273,36 @@ exports.editMedecinStateByEmail = async (email) => {
         resolve(result.affectedRows > 0);
       }
     });
+  });
+};
+
+exports.saveUserProfile = async ({
+  first_name,
+  last_name,
+  email,
+  phone,
+  new_email,
+}) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE Utilisateur 
+      SET first_name = COALESCE(?, first_name), 
+          last_name = COALESCE(?, last_name), 
+          email = COALESCE(?, new_email), 
+          phone = COALESCE(?, phone)
+      WHERE email = ?;
+    `;
+
+    connection.query(
+      sql,
+      [first_name, last_name, new_email, phone, email],
+      (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result.affectedRows > 0);
+        }
+      }
+    );
   });
 };
