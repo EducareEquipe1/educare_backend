@@ -25,6 +25,6 @@ router.post("/send-email-verification", sendEmailVerification);
 router.get("/activate/:token", activateAccount);
 router.post("/forgot-password", forgotPassword);
 router.post("/set-new-password", setNewPassword);
-router.put("/modify-profile/:email", modifyProfileInformations);
+router.patch("/modify-profile/:email", modifyProfileInformations);
 
 module.exports = router;

@@ -7,8 +7,8 @@ const sendEmail = require("../utils/emailService");
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 
 // ✅ modify profile infos
-exports.modifyProfileInformations = asyncHandler(async (req, res, userType) => {
-  const { first_name, last_name, new_email, phone } = req.body;
+exports.modifyProfileInformations = asyncHandler(async (req, res) => {
+  const { nom, prenom, new_email, num_tel } = req.body;
   const { email } = req.params; // Get email from request parameters
 
   try {
@@ -19,19 +19,21 @@ exports.modifyProfileInformations = asyncHandler(async (req, res, userType) => {
     }
 
     // Check if the new email already exists
+    if (new_email !== email) {
     if (new_email) {
       const existingUser = await Patient.findUserByEmail(new_email);
       if (existingUser) {
         return res.status(400).json({ message: "Email already exists" });
       }
     }
+}
 
     // Call the saveUserProfile function to update the database
     const success = await Patient.saveUserProfile({
-      first_name,
-      last_name,
+      nom,
+      prenom,
       email,
-      phone,
+      num_tel,
       new_email,
     });
 

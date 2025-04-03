@@ -214,7 +214,6 @@ exports.getAllMedecins = async () => {
   });
 };
 
-
 //we shouldnt work wit this right now
 exports.deleteUserByEmail = async (email) => {
   return new Promise(async (resolve, reject) => {
@@ -277,30 +276,85 @@ exports.editMedecinsarchiveByEmail = async (email) => {
 };
 
 exports.saveUserProfile = async ({
-  first_name,
-  last_name,
+  prenom,
+  nom,
   email,
-  phone,
+  num_tel,
   new_email,
 }) => {
   return new Promise((resolve, reject) => {
-    const sql = `
+    // SQL query to update Utilisateur table
+    const sqlUpdateUtilisateur = `
       UPDATE Utilisateur 
-      SET first_name = COALESCE(?, first_name), 
-          last_name = COALESCE(?, last_name), 
-          email = COALESCE(?, new_email), 
-          phone = COALESCE(?, phone)
+      SET  
+        email = COALESCE(?, email)
       WHERE email = ?;
     `;
 
+    // Build the Patient update query dynamically based on provided fields
+    let sqlUpdatePatient = `UPDATE Patient SET `;
+    let values = [];
+
+    // Dynamically add fields to the Patient update query only if they're provided
+    if (nom !== undefined) {
+      sqlUpdatePatient += `nom = ?, `;
+      values.push(nom);
+    }
+    if (prenom !== undefined) {
+      sqlUpdatePatient += `prenom = ?, `;
+      values.push(prenom);
+    }
+    if (num_tel !== undefined) {
+      sqlUpdatePatient += `num_tel = ?, `;
+      values.push(num_tel);
+    }
+
+    // Remove trailing comma and space
+    sqlUpdatePatient = sqlUpdatePatient.slice(0, -2);
+
+    sqlUpdatePatient += ` WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);`;
+
+    // Ensure the email value is added for the WHERE clause
+    values.push(email);
+
+    console.log("Executing SQL for Utilisateur update:", sqlUpdateUtilisateur);
+    console.log("Executing SQL for Patient update:", sqlUpdatePatient);
+
+    // First, update the Utilisateur table
     connection.query(
-      sql,
-      [first_name, last_name, new_email, phone, email],
+      sqlUpdateUtilisateur,
+      [new_email || email, email], // Use new_email if provided, otherwise use the current email
       (err, result) => {
         if (err) {
+          console.error("Error in Utilisateur update query:", err);
           reject(err);
         } else {
-          resolve(result.affectedRows > 0);
+          console.log(
+            "Rows affected in Utilisateur update:",
+            result.affectedRows
+          );
+          if (result.affectedRows > 0) {
+            // If Utilisateur update is successful, update the Patient table
+            connection.query(
+              sqlUpdatePatient,
+              values, // Dynamic values for Patient update query
+              (patientErr, patientResult) => {
+                if (patientErr) {
+                  console.error("Error in Patient update query:", patientErr);
+                  reject(patientErr);
+                } else {
+                  console.log(
+                    "Rows affected in Patient update:",
+                    patientResult.affectedRows
+                  );
+                  resolve(patientResult.affectedRows > 0);
+                }
+              }
+            );
+          } else {
+            console.log("No rows affected in Utilisateur update.");
+            resolve(false);
+          }
         }
       }
     );
