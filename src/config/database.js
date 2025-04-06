@@ -11,6 +11,7 @@ const sequelize = new Sequelize(
     dialect: "mysql",
     dialectOptions: {
       ssl: {
+        rejectUnauthorized: false, // <- THIS ALLOWS SELF-SIGNED CERTS
         ca: fs.readFileSync("./certs/ca.pem"), // ✅ Use official SSL certificate
       },
     },

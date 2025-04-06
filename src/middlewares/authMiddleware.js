@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("./asyncHandler");
+const connection = require("../db"); // Import the database connection
+
 
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
@@ -31,4 +33,27 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, adminMiddleware };
+// Middleware to check if user is a doctor
+const doctorMiddleware = asyncHandler(async (req, res, next) => {
+  const userId = req.user.id; // Extracted from token via authMiddleware
+
+  connection.query(
+    "SELECT * FROM Medecin WHERE utilisateur_id = ?",
+    [userId],
+    (err, results) => {
+      if (err) {
+        console.error("DB error in doctorMiddleware:", err);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      if (results.length === 0) {
+        return res.status(403).json({ message: "Access Denied: Doctors Only" });
+      }
+
+      next(); // User is a doctor
+    }
+  );
+});
+
+
+module.exports = { authMiddleware, adminMiddleware, doctorMiddleware };

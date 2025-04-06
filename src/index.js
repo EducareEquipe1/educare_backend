@@ -6,12 +6,14 @@ const db = require("./db");
 const setupSwagger = require("./middlewares/swagger");
 const cors = require("cors");
 
+
 // Import routes
 
 const patientRoutes = require("./routes/patient_routes");
 const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
 const directeurRoutes = require("./routes/directeur_routes");
+const dossierMedicalRoutes = require("./routes/dossierMedical_routes"); 
 
 
 app.use(
@@ -44,6 +46,7 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use("/api/dossier-medical", dossierMedicalRoutes);  
 // Test database connection
 
 const PORT = process.env.PORT || 3000;  // Use Render's assigned port or default to 3000 locally
