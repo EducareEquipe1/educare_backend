@@ -44,12 +44,12 @@ exports.activateAccount = asyncHandler(async (req, res, next) => {
       return res.status(400).json({ error: "Patient not found" });
     }
 
-    if (patient.isActivated) {
-      return res.status(400).json({ error: "Account already activated" });
+    if (patient.verified) {
+      return res.status(400).json({ error: "Account already verified" });
     }
 
     await Patient.updatePatientActivation(email);
-    res.status(200).json({ message: "Account activated successfully" });
+    res.status(200).json({ message: "Account verified successfully" });
     res.redirect("http://localhost:5173/");
   } catch (error) {
     res.status(400).json({ error: "Invalid or expired token" });

@@ -19,7 +19,7 @@ exports.findUserByEmail = async (email) => {
 // ✅ Update pation activation
 exports.updatePatientActivation = async (email) => {
   return new Promise((resolve, reject) => {
-    const query = "UPDATE Utilisateur SET is_active = ? WHERE email = ?";
+    const query = "UPDATE Utilisateur SET verified = ? WHERE email = ?";
     connection.query(query, [true, email], (err, result) => {
       //the problem is exactlo on this line it give us an error
       if (err) {
