@@ -91,3 +91,24 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Error retrieving medical record" });
   }
 });
+ 
+// PUT endpoint to update a medical record
+exports.updateMedicalRecord = asyncHandler(async (req, res) => {
+  const { patient_id } = req.params; // Get patient_id from URL
+
+  try {
+    const dossier = await DossierMedical.findOne({ where: { patient_id } });
+
+    if (!dossier) {
+      return res.status(404).json({ message: "Medical record not found for this patient" });
+    }
+
+    // Update only the fields present in req.body
+    await dossier.update(req.body);
+
+    res.status(200).json({ message: "Medical record updated successfully", dossier });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating medical record" });
+  }
+});
