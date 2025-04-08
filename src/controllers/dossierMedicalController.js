@@ -29,12 +29,12 @@ exports.createMedicalRecord = asyncHandler(async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    patient_id
+    email
   } = req.body;
 
   try {
     
-    const dossierExists = await DossierMedical.findOne({ where: { patient_id } });
+    const dossierExists = await DossierMedical.findOne({ where: { email } });
 
     if (dossierExists) {
       return res.status(404).json({ message: "Medical record already exists" });
@@ -65,7 +65,7 @@ exports.createMedicalRecord = asyncHandler(async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
-      patient_id
+      email
     });
     res.status(201).json(dossier);
   } catch (error) {
@@ -74,12 +74,12 @@ exports.createMedicalRecord = asyncHandler(async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve a medical record by patient_id
+// GET endpoint to retrieve a medical record by email
 exports.getMedicalRecord = asyncHandler(async (req, res) => {
-  const { patient_id } = req.params; // Extract patient_id from URL parameters
+  const { email } = req.params; 
 
   try {
-    const dossier = await DossierMedical.findOne({ where: { patient_id } });
+    const dossier = await DossierMedical.findOne({ where: { email } });
 
     if (!dossier) {
       return res.status(404).json({ message: "Medical record not found for this patient" });
@@ -89,5 +89,26 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error retrieving medical record" });
+  }
+});
+ 
+// PUT endpoint to update a medical record
+exports.updateMedicalRecord = asyncHandler(async (req, res) => {
+  const { email } = req.params; 
+
+  try {
+    const dossier = await DossierMedical.findOne({ where: { email } });
+
+    if (!dossier) {
+      return res.status(404).json({ message: "Medical record not found for this patient" });
+    }
+
+    // Update only the fields present in req.body
+    await dossier.update(req.body);
+
+    res.status(200).json({ message: "Medical record updated successfully", dossier });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating medical record" });
   }
 });

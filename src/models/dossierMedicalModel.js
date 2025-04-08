@@ -14,10 +14,7 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     type: DataTypes.DATE,
     allowNull: false,
   },
-  archive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
+ 
   groupeSanguin: {
     type: DataTypes.ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
     allowNull: false,
@@ -102,14 +99,15 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
   notes: {
     type: DataTypes.TEXT,
   },
-  patient_id: {
-    type: DataTypes.INTEGER,
+  email: {
+    type: DataTypes.STRING(255),
     references: {
-      model: 'Patient',  
-      key: 'id',
+      model: 'Utilisateur',  
+      key: 'email',
     },
     onDelete: 'CASCADE',
-  }
+  },
+  
 }, {
   tableName: 'Dossier_Medical',
   timestamps: false,  
