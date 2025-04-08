@@ -32,7 +32,7 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    patient_id
+    email
   } = req.body;
 
   try {
@@ -62,7 +62,7 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
-      patient_id
+      email
     });
     res.status(201).json(dossier);  // Send the created dossier back as a response
   } catch (error) {
@@ -73,12 +73,12 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
 });
 
 // GET endpoint to retrieve a medical record by patient_id
-router.get("/get/:patient_id", authMiddleware, async (req, res) => {
-  const { patient_id } = req.params;  // Extract patient_id from URL parameters
+router.get("/get/:email", authMiddleware, async (req, res) => {
+  const { email } = req.params;  // Extract patient_id from URL parameters
 
   try {
     // Find the medical record by patient_id
-    const dossier = await DossierMedical.findOne({ where: { patient_id } });
+    const dossier = await DossierMedical.findOne({ where: { email } });
 
     if (!dossier) {
       return res.status(404).json({ message: "Medical record not found for this patient" });
@@ -93,11 +93,11 @@ router.get("/get/:patient_id", authMiddleware, async (req, res) => {
 });
 
 // PUT endpoint to update a medical record by patient_id
-router.put("/update/:patient_id", authMiddleware, doctorMiddleware, async (req, res) => {
-  const { patient_id } = req.params;
+router.put("/update/:email", authMiddleware, doctorMiddleware, async (req, res) => {
+  const { email } = req.params;
 
   try {
-    const dossier = await DossierMedical.findOne({ where: { patient_id } });
+    const dossier = await DossierMedical.findOne({ where: { email } });
 
     if (!dossier) {
       return res.status(404).json({ message: "Medical record not found for this patient" });

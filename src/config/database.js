@@ -1,6 +1,7 @@
 const { Sequelize } = require("sequelize");
 const fs = require("fs");
 
+
 const sequelize = new Sequelize(
   "defaultdb",
   "avnadmin",
