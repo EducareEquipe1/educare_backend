@@ -7,8 +7,6 @@ const config = require("./config/config.json")[
 
 // Create MySQL connection
 const connection = mysql.createConnection({
-  // Added error handling for connection issues
-
   host: process.env.DB_HOST || "mysql-15ecfd54-esi-b3ed.e.aivencloud.com",
   port: process.env.DB_PORT || 17785,
   user: process.env.DB_USER || "avnadmin",
@@ -19,13 +17,7 @@ const connection = mysql.createConnection({
   },
 });
 
-// Connect to MySQL
 connection.connect((err) => {
-  if (err) {
-    console.error("❌ Error connecting to MySQL:", err);
-    return;
-  }
-
   if (err) {
     console.error("❌ Error connecting to MySQL:", err);
     return;
@@ -33,4 +25,5 @@ connection.connect((err) => {
   console.log("✅ Connected to Aiven MySQL database.");
 });
 
+// Export promise-based connection
 module.exports = connection;

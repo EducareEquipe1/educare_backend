@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-const sequelize = require("./config/database");
 require("dotenv").config();
 const db = require("./db");
 const setupSwagger = require("./middlewares/swagger");
@@ -12,7 +11,7 @@ const patientRoutes = require("./routes/patient_routes");
 const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
 const directeurRoutes = require("./routes/directeur_routes");
-const dossierMedicalRoutes = require("./routes/dossierMedical_routes");
+//const dossierMedicalRoutes = require("./routes/dossierMedical_routes");
 
 app.use(
   cors({
@@ -43,7 +42,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/dossier-medical", dossierMedicalRoutes);
+//app.use("/api/dossier-medical", dossierMedicalRoutes);
 // Test database connection
 
 const PORT = process.env.PORT || 3000; // Use Render's assigned port or default to 3000 locally

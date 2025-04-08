@@ -2,8 +2,6 @@ const jwt = require("jsonwebtoken");
 const asyncHandler = require("./asyncHandler");
 const connection = require("../db"); // Import the database connection
 
-
-
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 
 // Middleware to verify JWT token using async handler
@@ -12,6 +10,7 @@ const authMiddleware = (req, res, next) => {
   if (!authHeader) return res.status(401).json({ message: "Access Denied" });
 
   const token = authHeader.split(" ")[1]; // Extract only the actual token
+  console.log("im on auth middleware");
 
   if (!token) return res.status(401).json({ message: "Token missing" });
 
@@ -24,12 +23,14 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-
 // Middleware to check user roles using async handler
 const adminMiddleware = (req, res, next) => {
   if (!req.user || req.user.email !== "ni.merzouk@esi-sba.dz") {
     return res.status(403).json({ message: "Access Denied: Admins Only" });
+    console.log("im on admin midleware acces is denied");
   }
+  console.log("im on admin midleware acces is not denied ");
+
   next();
 };
 
@@ -54,6 +55,5 @@ const doctorMiddleware = asyncHandler(async (req, res, next) => {
     }
   );
 });
-
 
 module.exports = { authMiddleware, adminMiddleware, doctorMiddleware };

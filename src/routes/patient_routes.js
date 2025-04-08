@@ -10,7 +10,6 @@ const {
 } = require("../controllers/emailController");
 const {
   forgotPassword,
-  resetPassword,
   setNewPassword,
 } = require("../controllers/passwordController");
 const {
