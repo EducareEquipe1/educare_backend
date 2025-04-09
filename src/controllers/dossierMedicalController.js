@@ -33,7 +33,7 @@ exports.createMedicalRecord = async (req, res) => {
     
 
     email,} = req.body;
-
+  
   try {
     
     // Step 1: Find the user from the Utilisateur table based on email

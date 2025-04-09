@@ -359,7 +359,7 @@ exports.getArchivedUtilisateurs = async () => {
     });
   };
   
-  exports.transferDossierMedical = async (patientId) => {
+  exports.transferDossierMedical = async (email) => {
     return new Promise((resolve, reject) => {
       console.log("➡️ Start transferring DossierMedical");
   
@@ -367,7 +367,7 @@ exports.getArchivedUtilisateurs = async () => {
         SELECT * FROM DossierMedical WHERE patient_id = ?
       `;
   
-      connection.query(selectQuery, [patientId], (err, results) => {
+      connection.query(selectQuery, [email], (err, results) => {
         if (err) return reject("❌ Error fetching dossier: " + err);
         if (results.length === 0) return reject("❌ DossierMedical not found");
   
@@ -420,8 +420,8 @@ exports.getArchivedUtilisateurs = async () => {
           if (insertErr)
             return reject("❌ Error archiving DossierMedical: " + insertErr);
   
-          const deleteQuery = `DELETE FROM DossierMedical WHERE id = ?`;
-          connection.query(deleteQuery, [dossier.id], (deleteErr) => {
+          const deleteQuery = `DELETE FROM DossierMedical WHERE email = ?`;
+          connection.query(deleteQuery, [dossier.email], (deleteErr) => {
             if (deleteErr)
               return reject("❌ Error deleting DossierMedical: " + deleteErr);
   
@@ -434,7 +434,7 @@ exports.getArchivedUtilisateurs = async () => {
   };
 
   
-  exports.restoreDossierMedical = async (patientId) => {
+  exports.restoreDossierMedical = async (email) => {
     return new Promise((resolve, reject) => {
       console.log("🔁 Start restoring DossierMedical");
   
