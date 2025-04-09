@@ -18,37 +18,29 @@ const {
 const {
   uploadImage,
   uploadMiddleware,
+  getPatientPhoto,
 } = require("../controllers/faceValidationController");
 
 const router = express.Router();
 
+// Authentication routes
 router.post("/register", (req, res) => register(req, res, "Patient"));
 router.post("/login", login);
+router.get("/active", getActivePatients);
+
+// Email verification routes
 router.post("/send-email-verification", sendEmailVerification);
 router.get("/activate/:token", activateAccount);
+
+// Password management routes
 router.post("/forgot-password", forgotPassword);
 router.post("/set-new-password", setNewPassword);
-router.patch("/modify-profile/:email", modifyProfileInformations);
-router.post(
-  "/upload-id-photo",
-  (req, res, next) => {
-    console.log("\n[ROUTE] Upload ID photo endpoint hit");
-    console.log("Headers:", req.headers);
-    console.log("Content-Type:", req.get("Content-Type"));
 
-    uploadMiddleware(req, res, (err) => {
-      if (err) {
-        console.error("[ROUTE] Upload middleware error:", err);
-        return res.status(400).json({
-          success: false,
-          message: err.message,
-        });
-      }
-      console.log("[ROUTE] Proceeding to uploadImage controller");
-      next();
-    });
-  },
-  uploadImage
-);
+// Profile management routes
+router.patch("/modify-profile/:email", modifyProfileInformations);
+
+// Image upload route
+router.post("/upload-id-photo", uploadMiddleware, uploadImage);
+router.get("/get-patient-photo/:id", getPatientPhoto);
 
 module.exports = router;

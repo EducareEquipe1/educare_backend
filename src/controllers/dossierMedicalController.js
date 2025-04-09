@@ -31,6 +31,7 @@ exports.createMedicalRecord = async (req, res) => {
     reactionsAllergiques,
     notes,
     
+    
 
     email,} = req.body;
   
@@ -102,6 +103,7 @@ exports.createMedicalRecord = async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
+      patient_id: user.id,
       
 
       email,
