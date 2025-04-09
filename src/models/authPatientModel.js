@@ -1,4 +1,5 @@
 const connection = require("../db"); // Import the database connection
+const connectionArchive = require("../archiveDb"); // Import the database connection
 const bcrypt = require("bcrypt");
 const util = require("util");
 
@@ -12,6 +13,23 @@ exports.findUserByEmail = async (email) => {
       } else {
         resolve(results.length > 0 ? results[0] : null);
       }
+    });
+  });
+};
+exports.findUserByEmailArchived = async (email) => {
+  console.log("im looking inside archive")
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM Utilisateur WHERE email = ?";
+    console.log(connectionArchive);
+    connectionArchive.query(sql, [email], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        console.log('results is',results);
+        resolve(results.length > 0 ? results[0] : null);
+      }
+      console.log(results);
+
     });
   });
 };
@@ -128,6 +146,43 @@ exports.createPatient = (patientData, userType) => {
           });
         });
       });
+    });
+  });
+};
+
+exports.getUtilisateurs = async () => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        u.id, 
+        COALESCE(d.matricule, m.matricule, p.matricule) AS matricule, 
+        COALESCE(d.nom, m.nom, p.nom) AS nom, 
+        COALESCE(d.prenom, m.prenom, p.prenom) AS prenom,
+        u.email,
+        COALESCE(
+          CASE
+            WHEN d.matricule IS NOT NULL THEN 'directeur'
+            WHEN m.matricule IS NOT NULL THEN 'medecin'
+            WHEN p.matricule IS NOT NULL THEN p.categorie
+            ELSE 'unknown'
+          END, 
+          'unknown'
+        ) AS role
+      FROM 
+        archive.Utilisateur u
+      LEFT JOIN 
+        archive.Directeur d ON u.id = d.utilisateur_id
+      LEFT JOIN 
+        archive.Medecin m ON u.id = m.utilisateur_id
+      LEFT JOIN 
+        archive.Patient p ON u.id = p.utilisateur_id
+      WHERE
+        u.email != 'ni.merzouk@esi-sba.dz'
+    `;
+
+    connection.query(query, (err, results) => {
+      if (err) return reject("❌ Error fetching archived utilisateurs: " + err);
+      resolve(results);
     });
   });
 };

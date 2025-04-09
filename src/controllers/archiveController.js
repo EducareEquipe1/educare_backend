@@ -40,6 +40,20 @@ exports.restoreUtilisateur = async (req, res) => {
   }
 };
 
+
+
+exports.archiveDossierMedicalController = async (req, res) => {
+  const { patientId } = req.params;
+
+  try {
+    const result = await dossierService.transferDossierMedical(patientId);
+    res.status(200).json({ message: result });
+  } catch (error) {
+    res.status(500).json({ error: error.toString() });
+  }
+};
+
+
 exports.getArchivedUtilisateurs = async (req, res) => {
   try {
     // Fetch archived utilisateurs from the model
@@ -53,3 +67,4 @@ exports.getArchivedUtilisateurs = async (req, res) => {
     res.status(500).json({ error: error.toString() });
   }
 };
+
