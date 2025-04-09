@@ -24,7 +24,7 @@ app.use(
 app.use(express.json());
 // Use routes
 
-app.use("/api/patients", patientRoutes);
+app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
 app.use("/admin", administrateurRoutes);
 app.use("/directeur", directeurRoutes);

@@ -1,16 +1,17 @@
 const DossierMedical = require("../models/dossierMedicalModel");
+const patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
+const db = require("../config/database");
+const { findUserByEmail } = require("../models/authPatientModel");
 
-// POST endpoint to create a medical record
-exports.createMedicalRecord = asyncHandler(async (req, res) => {
-  const {
-    date_creation,
+
+
+exports.createMedicalRecord = async (req, res) => {
+  const { date_creation,
     groupeSanguin,
     numSecuriteSociale,
-    lieu_naissance,
     adresse,
     situation_famille,
-    date_admis,
     taille,
     poids,
     tabac_fume,
@@ -29,24 +30,60 @@ exports.createMedicalRecord = asyncHandler(async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    email
-  } = req.body;
+    
+
+    email,} = req.body;
 
   try {
     
-    const dossierExists = await DossierMedical.findOne({ where: { email } });
+    // Step 1: Find the user from the Utilisateur table based on email
+    const utilisateur = await findUserByEmail(email);  // Using the function that finds a user by email
 
-    if (dossierExists) {
-      return res.status(404).json({ message: "Medical record already exists" });
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur not found with this email" });
     }
-    const dossier = await DossierMedical.create({
+
+    const utilisateur_id = utilisateur.id; // Get the utilisateur_id
+
+    // Step 2: Check if the user exists in Patient, Medecin, or Directeur tables based on utilisateur_id
+    let user = null;
+    let statut = ''; // Initialize statut variable
+
+    // Check Patient table
+    const patient = await db.query("SELECT * FROM Patient WHERE utilisateur_id = ?", {
+      replacements: [utilisateur_id],
+      type: db.QueryTypes.SELECT,
+    });
+    console.log(patient); 
+    if (patient.length > 0) {
+      user = patient[0];
+      statut = user.categorie; // Set statut to patient's categorie
+    }
+
+    // If not found in Patient, check Directeur table
+    if (!user) {
+      const directeur = await db.query("SELECT * FROM Directeur WHERE utilisateur_id = ?", {
+        replacements: [utilisateur_id],
+        type: db.QueryTypes.SELECT,
+      });
+      if (directeur.length > 0) {
+        user = directeur[0];
+        statut = 'directeur'; // Set statut to 'directeur' for Directeur user
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found in any relevant table" });
+    }
+    console.log(user);  // Check if user has nom, prenom, num_tel
+
+    // Step 3: Create the Dossier_Medical record, including statut
+    const newDossier = await DossierMedical.create({
       date_creation,
       groupeSanguin,
       numSecuriteSociale,
-      lieu_naissance,
       adresse,
       situation_famille,
-      date_admis,
       taille,
       poids,
       tabac_fume,
@@ -65,16 +102,31 @@ exports.createMedicalRecord = asyncHandler(async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
-      email
+      
+
+      email,
+      nom: user.nom,  // Automatically fill the nom
+      prenom: user.prenom,  // Automatically fill the prenom
+      num_tel: user.num_tel,  // Automatically fill the num_tel
+      date_naissance: user.date_naissance,
+     
+      statut, 
+       // Include the statut field
     });
-    res.status(201).json(dossier);
+console.log(newDossier);
+    res.status(201).json({
+      message: "Medical record created successfully",
+      dossier: newDossier,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error creating medical record" });
+    res.status(500).json({ message: "Failed to create medical record" });
   }
-});
+};
 
-// GET endpoint to retrieve a medical record by email
+
+
+// GET endpoint to retrieve a medical record by email 
 exports.getMedicalRecord = asyncHandler(async (req, res) => {
   const { email } = req.params; 
 
