@@ -1,13 +1,11 @@
 const DossierMedical = require("../models/dossierMedicalModel");
-const patient = require("../models/authPatientModel");
+const { findUserByEmail } = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
-const { findUserByEmail } = require("../models/authPatientModel");
-
-
 
 exports.createMedicalRecord = async (req, res) => {
-  const { date_creation,
+  const {
+    date_creation,
     groupeSanguin,
     numSecuriteSociale,
     adresse,
@@ -30,10 +28,10 @@ exports.createMedicalRecord = async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    email,} = req.body;
-  
+    email,
+  } = req.body;
+
   try {
-    
     // Step 1: Find the user from the Utilisateur table based on email
     const utilisateur = await findUserByEmail(email);  // Using the function that finds a user by email
 
@@ -48,13 +46,14 @@ exports.createMedicalRecord = async (req, res) => {
     let statut = ''; // Initialize statut variable
 
     // Check Patient table
-    const patient = await db.query("SELECT * FROM Patient WHERE utilisateur_id = ?", {
+    const patientData = await db.query("SELECT * FROM Patient WHERE utilisateur_id = ?", {
       replacements: [utilisateur_id],
       type: db.QueryTypes.SELECT,
     });
-    console.log(patient); 
-    if (patient.length > 0) {
-      user = patient[0];
+
+    console.log(patientData);
+    if (patientData.length > 0) {
+      user = patientData[0];
       statut = user.categorie; // Set statut to patient's categorie
     }
 
@@ -73,14 +72,15 @@ exports.createMedicalRecord = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found in any relevant table" });
     }
+
     console.log(user);  // Check if user has nom, prenom, num_tel
 
     // Step 2.5: Check if a medical record already exists for this patient
-const existingRecord = await DossierMedical.findOne({ where: { email } });
+    const existingRecord = await DossierMedical.findOne({ where: { email } });
 
-if (existingRecord) {
-  return res.status(400).json({ message: "A medical record already exists for this patient" });
-}
+    if (existingRecord) {
+      return res.status(400).json({ message: "A medical record already exists for this patient" });
+    }
 
     // Step 3: Create the Dossier_Medical record, including statut
     const newDossier = await DossierMedical.create({
@@ -113,10 +113,11 @@ if (existingRecord) {
       prenom: user.prenom,  // Automatically fill the prenom
       num_tel: user.num_tel,  // Automatically fill the num_tel
       date_naissance: user.date_naissance,
-      statut, 
-       // Include the statut field
+      statut,  // Include the statut field
     });
-console.log(newDossier);
+
+    console.log(newDossier);
+
     res.status(201).json({
       message: "Medical record created successfully",
       dossier: newDossier,
@@ -127,11 +128,13 @@ console.log(newDossier);
   }
 };
 
-
-
 // GET endpoint to retrieve a medical record by email 
 exports.getMedicalRecord = asyncHandler(async (req, res) => {
-  const { email } = req.params; 
+  const { email } = req.params;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
   try {
     const dossier = await DossierMedical.findOne({ where: { email } });
@@ -146,6 +149,7 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Error retrieving medical record" });
   }
 });
+
  
 // PUT endpoint to update a medical record
 exports.updateMedicalRecord = asyncHandler(async (req, res) => {
