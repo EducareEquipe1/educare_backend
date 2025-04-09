@@ -30,9 +30,6 @@ exports.createMedicalRecord = async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    
-    
-
     email,} = req.body;
   
   try {
@@ -78,6 +75,13 @@ exports.createMedicalRecord = async (req, res) => {
     }
     console.log(user);  // Check if user has nom, prenom, num_tel
 
+    // Step 2.5: Check if a medical record already exists for this patient
+const existingRecord = await DossierMedical.findOne({ where: { email } });
+
+if (existingRecord) {
+  return res.status(400).json({ message: "A medical record already exists for this patient" });
+}
+
     // Step 3: Create the Dossier_Medical record, including statut
     const newDossier = await DossierMedical.create({
       date_creation,
@@ -104,14 +108,11 @@ exports.createMedicalRecord = async (req, res) => {
       reactionsAllergiques,
       notes,
       patient_id: user.id,
-      
-
       email,
       nom: user.nom,  // Automatically fill the nom
       prenom: user.prenom,  // Automatically fill the prenom
       num_tel: user.num_tel,  // Automatically fill the num_tel
       date_naissance: user.date_naissance,
-     
       statut, 
        // Include the statut field
     });
@@ -164,5 +165,37 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error updating medical record" });
+  }
+});
+
+// controllers/dossierMedicalController.js
+
+exports.getAllMedicalRecords = asyncHandler(async (req, res) => {
+  try {
+    const records = await db.query(
+      `
+      SELECT 
+        dm.id,
+        dm.date_creation,
+        dm.statut,
+        dm.email,
+        dm.nom,
+        dm.prenom,
+        dm.num_tel,
+        p.matricule,
+        p.categorie AS role
+      FROM Dossier_Medicals dm
+      LEFT JOIN Patient p ON dm.email = p.email
+      ORDER BY dm.date_creation DESC
+      `,
+      {
+        type: db.QueryTypes.SELECT,
+      }
+    );
+
+    res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching medical records:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des dossiers médicaux" });
   }
 });
