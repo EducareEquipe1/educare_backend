@@ -10,7 +10,6 @@ const {
 } = require("../controllers/getUsersController"); // Change this path to match your project structure
 
 const {
-  
   archiveUtilisateur,
   restoreUtilisateur,
   getArchivedUtilisateurs,
@@ -75,13 +74,12 @@ router.get(
   adminMiddleware,
   getArchivedUtilisateurs
 );
-
 router.get("/get-users", authMiddleware, adminMiddleware, getUtilisateurs);
-
+/*
 router.post(
   "/archive-dossier-medical/:email",
   authMiddleware,
   adminMiddleware,
   archiveDossierMedicalController
-);
+);*/
 module.exports = router; // ✅ Make sure you're exporting the router correctly

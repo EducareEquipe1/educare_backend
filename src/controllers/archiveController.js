@@ -1,10 +1,7 @@
 const { getArchivedUtilisateurs } = require("../models/archiveModel");
 // ✅ Register Patient
 const { transferUtilisateur } = require("../models/archiveModel");
-const {
-  restoreUtilisateur,
-  transferDossierMedical,
-} = require("../models/archiveModel");
+const { restoreUtilisateur } = require("../models/archiveModel");
 
 exports.archiveUtilisateur = async (req, res) => {
   try {
@@ -43,16 +40,19 @@ exports.restoreUtilisateur = async (req, res) => {
   }
 };
 
-exports.archiveDossierMedicalController = async (req, res) => {
+
+
+/*exports.archiveDossierMedicalController = async (req, res) => {
   const { email } = req.params;
 
   try {
-    const result = await transferDossierMedical(email);
+    const result = await dossierService.transferDossierMedical(email);
     res.status(200).json({ message: result });
   } catch (error) {
     res.status(500).json({ error: error.toString() });
   }
 };
+*/
 
 exports.getArchivedUtilisateurs = async (req, res) => {
   try {
@@ -67,3 +67,4 @@ exports.getArchivedUtilisateurs = async (req, res) => {
     res.status(500).json({ error: error.toString() });
   }
 };
+
