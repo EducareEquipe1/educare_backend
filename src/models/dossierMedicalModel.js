@@ -126,6 +126,15 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     },
     onDelete: 'CASCADE',
   },
+  patient_id: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Utilisateur',  
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+  },
+  
   
 }, {
   tableName: 'Dossier_Medical',
