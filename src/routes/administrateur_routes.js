@@ -3,12 +3,18 @@ const { register, login } = require("../controllers/authController");
 
 // ✅ Import from the correct controller file
 const {
+  getUtilisateurs,
   getAllMedecins,
   getActivePatients,
   getAllPatients,
 } = require("../controllers/getUsersController"); // Change this path to match your project structure
 
-const { archiveUtilisateur,restoreUtilisateur, getArchivedUtilisateurs  } = require("../controllers/archiveController");
+const {
+  archiveUtilisateur,
+  restoreUtilisateur,
+  getArchivedUtilisateurs,
+  archiveDossierMedicalController,
+} = require("../controllers/archiveController");
 const router = express.Router();
 const {
   authMiddleware,
@@ -61,12 +67,19 @@ router.post(
   authMiddleware,
   adminMiddleware,
   restoreUtilisateur
-
 );
-router.get("/get-archived-users",
+router.get(
+  "/get-archived-users",
   authMiddleware,
   adminMiddleware,
   getArchivedUtilisateurs
-)
-
+);
+router.get("/get-users", authMiddleware, adminMiddleware, getUtilisateurs);
+/*
+router.post(
+  "/archive-dossier-medical/:email",
+  authMiddleware,
+  adminMiddleware,
+  archiveDossierMedicalController
+);*/
 module.exports = router; // ✅ Make sure you're exporting the router correctly

@@ -22,7 +22,17 @@ connection.connect((err) => {
     console.error("❌ Error connecting to MySQL:", err);
     return;
   }
-  console.log("✅ Connected to Aiven MySQL database.");
+  // Verify connection details
+  connection.query(
+    "SELECT DATABASE() as db, USER() as user",
+    (err, results) => {
+      if (err) {
+        console.error("❌ Error verifying connection:", err);
+      } else {
+        console.log("✅ Connected to Aiven MySQL database:", results[0]);
+      }
+    }
+  );
 });
 
 // Export promise-based connection

@@ -135,10 +135,10 @@ exports.transferUtilisateur = async (email) => {
                                 );
   
                               console.log(
-                                `✅ User and ${table} successfully transferred.`
+                                `✅ User and ${table} successfully archived.`
                               );
                               resolve(
-                                `✅ User and ${table} successfully transferred.`
+                                `✅ User and ${table} successfully archived.`
                               );
                             }
                           );
@@ -359,7 +359,158 @@ exports.getArchivedUtilisateurs = async () => {
     });
   };
   
+  exports.transferDossierMedical = async (email) => {
+    return new Promise((resolve, reject) => {
+      console.log("➡️ Start transferring DossierMedical");
+  
+      const selectQuery = `
+        SELECT * FROM DossierMedical WHERE patient_id = ?
+      `;
+  
+      connection.query(selectQuery, [email], (err, results) => {
+        if (err) return reject("❌ Error fetching dossier: " + err);
+        if (results.length === 0) return reject("❌ DossierMedical not found");
+  
+        const dossier = results[0];
+  
+        const insertQuery = `
+          INSERT INTO archive.DossierMedical (
+            id, date_creation, groupeSanguin, numSecuriteSociale, lieu_naissance,
+            adresse, situation_famille, date_admis, taille, poids, 
+            tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
+            tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, 
+            periode_exposition, alcool, medicaments, affectionsCongenitales, 
+            maladiesGenerales, interventionsChirurgicales, reactionsAllergiques, 
+            notes, patient_id
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+  
+        const insertValues = [
+          dossier.id,
+          dossier.date_creation,
+          dossier.groupeSanguin,
+          dossier.numSecuriteSociale,
+          dossier.lieu_naissance,
+          dossier.adresse,
+          dossier.situation_famille,
+          dossier.date_admis,
+          dossier.taille,
+          dossier.poids,
+          dossier.tabac_fume,
+          dossier.tabac_fume_nombre,
+          dossier.tabac_chique,
+          dossier.tabac_chique_nombre,
+          dossier.tabac_pris,
+          dossier.tabac_pris_nombre,
+          dossier.age_pris,
+          dossier.ancien_fume,
+          dossier.periode_exposition,
+          dossier.alcool,
+          dossier.medicaments,
+          dossier.affectionsCongenitales,
+          dossier.maladiesGenerales,
+          dossier.interventionsChirurgicales,
+          dossier.reactionsAllergiques,
+          dossier.notes,
+          dossier.patient_id,
+        ];
+  
+        connectionArchive.query(insertQuery, insertValues, (insertErr) => {
+          if (insertErr)
+            return reject("❌ Error archiving DossierMedical: " + insertErr);
+  
+          const deleteQuery = `DELETE FROM DossierMedical WHERE email = ?`;
+          connection.query(deleteQuery, [dossier.email], (deleteErr) => {
+            if (deleteErr)
+              return reject("❌ Error deleting DossierMedical: " + deleteErr);
+  
+            console.log("✅ DossierMedical successfully archived.");
+            resolve("✅ DossierMedical successfully archived.");
+          });
+        });
+      });
+    });
+  };
 
+  
+  exports.restoreDossierMedical = async (email) => {
+    return new Promise((resolve, reject) => {
+      console.log("🔁 Start restoring DossierMedical");
+  
+      const selectQuery = `
+        SELECT * FROM archive.DossierMedical WHERE patient_id = ?
+      `;
+  
+      connectionArchive.query(selectQuery, [patientId], (err, results) => {
+        if (err) return reject("❌ Error fetching archived dossier: " + err);
+        if (results.length === 0)
+          return reject("❌ Archived DossierMedical not found");
+  
+        const dossier = results[0];
+  
+        const insertQuery = `
+          INSERT INTO DossierMedical (
+            id, date_creation, groupeSanguin, numSecuriteSociale, lieu_naissance,
+            adresse, situation_famille, date_admis, taille, poids, 
+            tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
+            tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, 
+            periode_exposition, alcool, medicaments, affectionsCongenitales, 
+            maladiesGenerales, interventionsChirurgicales, reactionsAllergiques, 
+            notes, patient_id
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+  
+        const insertValues = [
+          dossier.id,
+          dossier.date_creation,
+          dossier.groupeSanguin,
+          dossier.numSecuriteSociale,
+          dossier.lieu_naissance,
+          dossier.adresse,
+          dossier.situation_famille,
+          dossier.date_admis,
+          dossier.taille,
+          dossier.poids,
+          dossier.tabac_fume,
+          dossier.tabac_fume_nombre,
+          dossier.tabac_chique,
+          dossier.tabac_chique_nombre,
+          dossier.tabac_pris,
+          dossier.tabac_pris_nombre,
+          dossier.age_pris,
+          dossier.ancien_fume,
+          dossier.periode_exposition,
+          dossier.alcool,
+          dossier.medicaments,
+          dossier.affectionsCongenitales,
+          dossier.maladiesGenerales,
+          dossier.interventionsChirurgicales,
+          dossier.reactionsAllergiques,
+          dossier.notes,
+          dossier.patient_id,
+        ];
+  
+        connection.query(insertQuery, insertValues, (insertErr) => {
+          if (insertErr)
+            return reject("❌ Error restoring DossierMedical: " + insertErr);
+  
+          const deleteQuery = `DELETE FROM archive.DossierMedical WHERE id = ?`;
+          connectionArchive.query(deleteQuery, [dossier.id], (deleteErr) => {
+            if (deleteErr)
+              return reject(
+                "❌ Error deleting from archive.DossierMedical: " + deleteErr
+              );
+  
+            console.log("✅ DossierMedical successfully restored.");
+            resolve("✅ DossierMedical successfully restored.");
+          });
+        });
+      });
+    });
+  };
+  
 /*
 exports.findArchivedUser = async (email) => {
     return new Promise((resolve, reject) => {

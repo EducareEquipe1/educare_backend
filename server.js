@@ -4,27 +4,44 @@ const patientRoutes = require("./src/routes/patient_routes");
 require("dotenv").config();
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Add health check endpoint
-app.get("/api/health", (req, res) => {
-  console.log("Health check endpoint hit");
-  res.json({ status: "ok", routes: ["/api/patients/upload-id-photo"] });
-});
-
-// Log all incoming requests
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`\n[APP] Incoming ${req.method} request to ${req.originalUrl}`);
-  console.log("Headers:", req.headers);
+  console.log(
+    `\n[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
+  );
   next();
 });
 
-app.use("/api/patients", patientRoutes);
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    routes: ["/patients/upload-id-photo"],
+  });
+});
 
+// Routes
+app.use("/patients", patientRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("[ERROR]", err);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n[APP] Server running on http://localhost:${PORT}`);
-  console.log("[APP] Registered routes:");
-  console.log("- POST /api/patients/upload-id-photo");
+  console.log("[APP] Environment:", process.env.NODE_ENV || "development");
 });

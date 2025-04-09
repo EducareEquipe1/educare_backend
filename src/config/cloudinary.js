@@ -1,50 +1,48 @@
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-// Direct configuration values (REPLACE THESE WITH YOUR ACTUAL VALUES)
+// Configuration
 const config = {
-  cloud_name: "dhefudthm",
-  api_key: "857441834646328",
-  api_secret: "nS5K4h5xaSlP5n5XHLKmtPAorbo",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dhefudthm",
+  api_key: process.env.CLOUDINARY_API_KEY || "857441834646328",
+  api_secret:
+    process.env.CLOUDINARY_API_SECRET || "nS5K4h5xaSlP5n5XHLKmtPAorbo",
 };
 
-// Verify all required values are present
+// Validate configuration
 const required = ["cloud_name", "api_key", "api_secret"];
 const missing = required.filter((key) => !config[key]);
 if (missing.length) {
-  throw new Error(`Missing Cloudinary config: ${missing.join(", ")}`);
+  throw new Error(`Missing Cloudinary configuration: ${missing.join(", ")}`);
 }
 
 // Configure Cloudinary
 cloudinary.config({
   ...config,
-  secure: true, // Always use HTTPS
+  secure: true,
 });
 
-// Medical ID photo storage with strict validation
+// Storage configuration
 const medicalIdStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "educare/medical_ids",
     allowed_formats: ["jpg", "jpeg", "png"],
     transformation: [
-      { width: 500, height: 500, crop: "fill", gravity: "face" },
+      { width: 800, height: 800, crop: "limit" },
       { quality: "auto:best" },
     ],
-    public_id: (req, file) => {
-      const userId = req.user?.id || "temp";
-      return `med_id_${userId}_${Date.now()}`;
-    },
+    public_id: (req, file) => `med_id_${Date.now()}`,
     resource_type: "image",
-    invalidate: true, // Refresh CDN cache
+    invalidate: true,
   },
 });
 
 // Test connection
 cloudinary.api
   .ping()
-  .then(() => console.log("Cloudinary connection successful"))
-  .catch((err) => console.error("Cloudinary connection failed:", err));
+  .then(() => console.log("[CLOUDINARY] Connection successful"))
+  .catch((err) => console.error("[CLOUDINARY] Connection failed:", err));
 
 module.exports = {
   cloudinary,
