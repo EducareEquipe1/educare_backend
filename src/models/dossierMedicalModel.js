@@ -4,6 +4,9 @@ const sequelize = require("../config/database");
 const connection = require("../db"); // Import the database connection
 const bcrypt = require("bcrypt");
 
+
+
+
 const DossierMedical = sequelize.define("Dossier_Medical", {
   id: {
     type: DataTypes.INTEGER,
@@ -14,7 +17,22 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     type: DataTypes.DATE,
     allowNull: false,
   },
- 
+  date_naissance: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  nom: {
+    type: DataTypes.STRING,  // Ensure nom is defined here
+    allowNull: false,
+  },
+  prenom: {
+    type: DataTypes.STRING,  // Ensure prenom is defined here
+    allowNull: false,
+  },
+  num_tel: {
+    type: DataTypes.STRING,  // Ensure num_tel is defined here
+    allowNull: false,
+  },
   groupeSanguin: {
     type: DataTypes.ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
     allowNull: false,
@@ -24,19 +42,14 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     unique: true,
     allowNull: false,
   },
-  lieu_naissance: {
-    type: DataTypes.STRING(255),
-  },
+ 
   adresse: {
     type: DataTypes.STRING(255),
   },
   situation_famille: {
     type: DataTypes.STRING(100),
   },
-  date_admis: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
+  
   taille: {
     type: DataTypes.FLOAT,
   },
@@ -99,6 +112,12 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
   notes: {
     type: DataTypes.TEXT,
   },
+  statut: {
+    type: DataTypes.ENUM('directeur', 'ATS', 'enseignant', 'etudiant'),
+    allowNull: false,
+  },
+  
+    
   email: {
     type: DataTypes.STRING(255),
     references: {

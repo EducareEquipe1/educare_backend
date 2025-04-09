@@ -38,8 +38,17 @@ exports.register = asyncHandler(async (req, res, userType) => {
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
   const existingPatient = await Patient.findUserByEmail(email);
+  console.log("existing patinet is", existingPatient);
+  const existingPatientArchived = await Patient.findUserByEmailArchived(email);
+  console.log(
+    "existing patient that are archived are",
+    existingPatientArchived
+  );
+  if (existingPatientArchived) {
+    return res.status(400).json({ error: "User already exists " });
+  }
   if (existingPatient) {
-    return res.status(400).json({ error: "Patient already exists" });
+    return res.status(400).json({ error: "User already exists" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -89,6 +98,10 @@ exports.login = asyncHandler(async (req, res) => {
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
   const patient = await Patient.findUserByEmail(email);
+  const patientArchived = await Patient.findUserByEmailArchived(email);
+  if (patientArchived) {
+    return res.status(401).json({ error: "User is archived " });
+  }
   if (!patient) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
@@ -136,3 +149,5 @@ exports.getPatientProfile = asyncHandler(async (req, res) => {
     email: patient.email,
   });
 });
+
+
