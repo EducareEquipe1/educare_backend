@@ -1,19 +1,19 @@
 const { Sequelize } = require("sequelize");
 const fs = require("fs");
-
+require("dotenv").config();
 
 const sequelize = new Sequelize(
-  "defaultdb",
-  "avnadmin",
-  "AVNS_HeIj0FXeoPmepZrO4lA",
+  process.env.DB_NAME || "defaultdb",
+  process.env.DB_USER || "avnadmin",
+  process.env.DB_PASSWORD || "AVNS_HeIj0FXeoPmepZrO4lA",
   {
-    host: "mysql-15ecfd54-esi-b3ed.e.aivencloud.com",
-    port: 17785,
+    host: process.env.DB_HOST || "mysql-15ecfd54-esi-b3ed.e.aivencloud.com",
+    port: process.env.DB_PORT || 17785,
     dialect: "mysql",
     dialectOptions: {
       ssl: {
-        rejectUnauthorized: false, // <- THIS ALLOWS SELF-SIGNED CERTS
-        ca: fs.readFileSync("./certs/ca.pem"), // ✅ Use official SSL certificate
+        rejectUnauthorized: false,
+        ca: fs.readFileSync(process.env.DB_SSL_CA_PATH || "./certs/ca.pem"),
       },
     },
   }
