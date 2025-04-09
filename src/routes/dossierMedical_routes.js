@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createMedicalRecord } = require("../controllers/dossierMedicalController");
+const { createMedicalRecord, getMedicalRecord } = require("../controllers/dossierMedicalController");
 const DossierMedical = require("../models/dossierMedicalModel");
 const { authMiddleware, doctorMiddleware } = require("../middlewares/authMiddleware");
 
@@ -10,10 +10,13 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
     date_creation,
     groupeSanguin,
     numSecuriteSociale,
-    lieu_naissance,
+    
     adresse,
     situation_famille,
-    date_admis,
+    nom,
+    prenom,
+    num_tel,
+    date_naissance,
     taille,
     poids,
     tabac_fume,
@@ -32,7 +35,8 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    email
+    email,
+    statut
   } = req.body;
 
   try {
@@ -40,10 +44,9 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
       date_creation,
       groupeSanguin,
       numSecuriteSociale,
-      lieu_naissance,
+     
       adresse,
-      situation_famille,
-      date_admis,
+    
       taille,
       poids,
       tabac_fume,
@@ -73,7 +76,7 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
 });
 
 // GET endpoint to retrieve a medical record by patient_id
-router.get("/get/:email", authMiddleware, async (req, res) => {
+router.get("/get/:email", authMiddleware,getMedicalRecord, async (req, res) => {
   const { email } = req.params;  // Extract patient_id from URL parameters
 
   try {
@@ -93,7 +96,7 @@ router.get("/get/:email", authMiddleware, async (req, res) => {
 });
 
 // PUT endpoint to update a medical record by patient_id
-router.put("/update/:email", authMiddleware, doctorMiddleware, async (req, res) => {
+router.put("/update/:email", authMiddleware, doctorMiddleware,getMedicalRecord, async (req, res) => {
   const { email } = req.params;
 
   try {

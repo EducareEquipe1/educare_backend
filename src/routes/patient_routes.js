@@ -15,6 +15,10 @@ const {
 const {
   modifyProfileInformations,
 } = require("../controllers/modifyProfileController");
+const {
+  uploadImage,
+  uploadMiddleware,
+} = require("../controllers/faceValidationController");
 
 const router = express.Router();
 
@@ -25,5 +29,26 @@ router.get("/activate/:token", activateAccount);
 router.post("/forgot-password", forgotPassword);
 router.post("/set-new-password", setNewPassword);
 router.patch("/modify-profile/:email", modifyProfileInformations);
+router.post(
+  "/upload-id-photo",
+  (req, res, next) => {
+    console.log("\n[ROUTE] Upload ID photo endpoint hit");
+    console.log("Headers:", req.headers);
+    console.log("Content-Type:", req.get("Content-Type"));
+
+    uploadMiddleware(req, res, (err) => {
+      if (err) {
+        console.error("[ROUTE] Upload middleware error:", err);
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      console.log("[ROUTE] Proceeding to uploadImage controller");
+      next();
+    });
+  },
+  uploadImage
+);
 
 module.exports = router;
