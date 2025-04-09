@@ -11,7 +11,7 @@ const {updateMedicalRecord} = require("../controllers/dossierMedicalController")
 
 
 router.post("/register",authMiddleware, adminMiddleware, (req, res) => register(req, res, "Medecin"));
-router.post("/dossier-medical-create",authMiddleware, doctorMiddleware,createMedicalRecord );
+router.post("/dossier-medical-create/",authMiddleware, doctorMiddleware,createMedicalRecord );
 router.get("/get-dossier-medical/:email",authMiddleware, doctorMiddleware,getMedicalRecord );
 router.put("/medical-records-update/:email",authMiddleware, doctorMiddleware,updateMedicalRecord );
 
