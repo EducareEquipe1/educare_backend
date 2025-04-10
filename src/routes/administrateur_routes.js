@@ -17,7 +17,7 @@ const {
 const router = express.Router();
 const {
   authMiddleware,
-  adminMiddleware,
+  doctorMiddleware,
 } = require("../middlewares/authMiddleware");
 const {
   deleteUserByEmail,
@@ -28,13 +28,13 @@ router.post("/register", (req, res) => register(req, res, "Admin"));
 router.get(
   "/get-active-patients",
   authMiddleware,
-  adminMiddleware,
+  doctorMiddleware,
   getActivePatients
 );
 router.get(
   "/get-all-patients",
   authMiddleware,
-  adminMiddleware,
+  doctorMiddleware,
   getAllPatients
 );
 router.get(
