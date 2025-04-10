@@ -214,7 +214,7 @@ exports.changeUserPassword = (userData) => {
 exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
+      SELECT p.matricule , u.email, p.nom, p.prenom 
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
       WHERE u.verified = 1
@@ -233,7 +233,7 @@ exports.getActivePatients = async () => {
 exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-     SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
+     SELECT p.matricule , u.email, p.nom, p.prenom 
       FROM Patient p
       JOIN Utilisateur u ON p.utilisateur_id = u.id
       
