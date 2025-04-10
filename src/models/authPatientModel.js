@@ -168,13 +168,13 @@ exports.getUtilisateurs = async () => {
           'unknown'
         ) AS role
       FROM 
-        archive.Utilisateur u
+        defaultdb.Utilisateur u
       LEFT JOIN 
-        archive.Directeur d ON u.id = d.utilisateur_id
+        defaultdb.Directeur d ON u.id = d.utilisateur_id
       LEFT JOIN 
-        archive.Medecin m ON u.id = m.utilisateur_id
+        defaultdb.Medecin m ON u.id = m.utilisateur_id
       LEFT JOIN 
-        archive.Patient p ON u.id = p.utilisateur_id
+        defaultdb.Patient p ON u.id = p.utilisateur_id
       WHERE
         u.email != 'ni.merzouk@esi-sba.dz'
     `;
