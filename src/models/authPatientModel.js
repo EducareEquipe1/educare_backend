@@ -210,14 +210,17 @@ exports.changeUserPassword = (userData) => {
   });
 };
 
-exports.getActivePatients = async () => {
+exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule , u.email, p.nom, p.prenom 
-      FROM Utilisateur u 
-      JOIN Patient u ON p.utilisateur_id = u.id 
-       JOIN Directeur u ON p.utilisateur_id = u.id 
-      WHERE u.verified = 1
+      SELECT 
+        COALESCE(p.matricule, d.matricule) AS matricule,
+        u.email, 
+        COALESCE(p.nom, d.nom) AS nom, 
+        COALESCE(p.prenom, d.prenom) AS prenom
+      FROM Utilisateur u
+      LEFT JOIN Patient p ON u.id = p.utilisateur_id
+      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
     `;
 
     connection.query(sql, (err, results) => {
@@ -230,13 +233,18 @@ exports.getActivePatients = async () => {
   });
 };
 
-exports.getAllPatients = async () => {
+exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-     SELECT p.matricule , u.email, p.nom, p.prenom 
-      FROM Utilisateur u 
-      JOIN Patient u ON p.utilisateur_id = u.id 
-       JOIN Directeur u ON p.utilisateur_id = u.id 
+      SELECT 
+        COALESCE(p.matricule, d.matricule) AS matricule,
+        u.email, 
+        COALESCE(p.nom, d.nom) AS nom, 
+        COALESCE(p.prenom, d.prenom) AS prenom
+      FROM Utilisateur u
+      LEFT JOIN Patient p ON u.id = p.utilisateur_id
+      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
+      WHERE u.verified = 1
     `;
 
     connection.query(sql, (err, results) => {
