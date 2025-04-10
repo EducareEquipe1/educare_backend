@@ -13,7 +13,7 @@ const connectionArchive = mysql.createConnection({
   port: process.env.DB_PORT || 17785,
   user: process.env.DB_USER || "avnadmin",
   password: process.env.DB_PASSWORD || "AVNS_HeIj0FXeoPmepZrO4lA",
-  database: process.env.DB_NAME || "archive",
+  database: "archive",
   ssl: {
     rejectUnauthorized: false,
   },

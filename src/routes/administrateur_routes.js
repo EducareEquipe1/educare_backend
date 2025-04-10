@@ -10,11 +10,9 @@ const {
 } = require("../controllers/getUsersController"); // Change this path to match your project structure
 
 const {
-  
   archiveUtilisateur,
   restoreUtilisateur,
   getArchivedUtilisateurs,
-  archiveDossierMedicalController,
 } = require("../controllers/archiveController");
 const router = express.Router();
 const {
@@ -82,6 +80,6 @@ router.post(
   "/archive-dossier-medical/:email",
   authMiddleware,
   adminMiddleware,
-  archiveDossierMedicalController
+  getArchivedUtilisateurs
 );
 module.exports = router; // ✅ Make sure you're exporting the router correctly

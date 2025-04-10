@@ -326,97 +326,41 @@ exports.restoreUtilisateur = async (email) => {
   });
 };
 
-exports.transferDossierMedical = async (email) => {
+exports.getArchivedUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
-    console.log("➡️ Start transferring Dossier_Medical");
+    const query = `
+      SELECT 
+        u.id, 
+        COALESCE(d.matricule, m.matricule, p.matricule) AS matricule, 
+        COALESCE(d.nom, m.nom, p.nom) AS nom, 
+        COALESCE(d.prenom, m.prenom, p.prenom) AS prenom,  -- Added prenom here
+        u.email,
+        COALESCE(
+          CASE
+            WHEN d.matricule IS NOT NULL THEN 'directeur'
+            WHEN m.matricule IS NOT NULL THEN 'medecin'
+            WHEN p.matricule IS NOT NULL THEN p.categorie
+            ELSE 'unknown'
+          END, 
+          'unknown'
+        ) AS role
+      FROM 
+        archive.Utilisateur u
+      LEFT JOIN 
+        archive.Directeur d ON u.id = d.utilisateur_id
+      LEFT JOIN 
+        archive.Medecin m ON u.id = m.utilisateur_id
+      LEFT JOIN 
+        archive.Patient p ON u.id = p.utilisateur_id
+      
+    `;
 
-    // Step 1: Fetch the Utilisateur record by email
-    const userQuery = "SELECT * FROM Utilisateur WHERE email = ?";
-    connection.query(userQuery, [email], (err, userResults) => {
-      if (err) return reject("❌ Error fetching user: " + err);
-      if (userResults.length === 0) return reject("❌ User not found");
-
-      const utilisateur = userResults[0];
-
-      // Step 2: Fetch the Patient record using the Utilisateur.id
-      const patientQuery = "SELECT * FROM Patient WHERE utilisateur_id = ?";
-      connection.query(patientQuery, [utilisateur.id], (err, patientResults) => {
-        if (err) return reject("❌ Error fetching patient: " + err);
-        if (patientResults.length === 0) return reject("❌ Patient not found");
-
-        const patient = patientResults[0];
-
-        // Now we have the patient_id (patient.id) for use in the Dossier_Medical
-
-        // Step 3: Fetch the Dossier_Medical record for the Patient
-        const dossierQuery = "SELECT * FROM Dossier_Medical WHERE patient_id = ?";
-        connection.query(dossierQuery, [patient.id], (err, dossierResults) => {
-          if (err) return reject("❌ Error fetching Dossier_Medical: " + err);
-          if (dossierResults.length === 0) return reject("❌ Dossier_Medical not found");
-
-          const dossier = dossierResults[0];
-
-          // Step 4: Archive the Dossier_Medical record into the archive database
-          const archiveDossierQuery = `
-            INSERT INTO archive.Dossier_Medical 
-            (date_creation, groupeSanguin, numSecuriteSociale, lieu_naissance, adresse, situation_famille, 
-            date_admis, taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
-            tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, medicaments, 
-            affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, reactionsAllergiques, notes, patient_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-
-          const values = [
-            dossier.date_creation, 
-            dossier.groupeSanguin, 
-            dossier.numSecuriteSociale, 
-            dossier.lieu_naissance, 
-            dossier.adresse, 
-            dossier.situation_famille,
-            dossier.date_admis, 
-            dossier.taille, 
-            dossier.poids, 
-            dossier.tabac_fume, 
-            dossier.tabac_fume_nombre, 
-            dossier.tabac_chique, 
-            dossier.tabac_chique_nombre,
-            dossier.tabac_pris, 
-            dossier.tabac_pris_nombre, 
-            dossier.age_pris, 
-            dossier.ancien_fume, 
-            dossier.periode_exposition, 
-            dossier.alcool, 
-            dossier.medicaments,
-            dossier.affectionsCongenitales, 
-            dossier.maladiesGenerales, 
-            dossier.interventionsChirurgicales, 
-            dossier.reactionsAllergiques, 
-            dossier.notes, 
-            patient.id // Make sure this is the correct patient_id
-          ];
-
-          // Debugging: Check if the number of columns and values match
-          console.log("Column count in archive.Dossier_Medical:", 26); // 26 columns to insert (excluding 'id')
-          console.log("Number of values being inserted:", values.length);
-
-          connectionArchive.query(archiveDossierQuery, values, (insertErr) => {
-            if (insertErr) return reject("❌ Error archiving Dossier_Medical: " + insertErr);
-
-            // Step 5: Delete the Dossier_Medical record from the original database
-            const deleteDossierQuery = "DELETE FROM Dossier_Medical WHERE id = ?";
-            connection.query(deleteDossierQuery, [dossier.id], (deleteErr) => {
-              if (deleteErr) return reject("❌ Error deleting Dossier_Medical: " + deleteErr);
-
-              console.log("✅ Dossier_Medical successfully archived and deleted.");
-              resolve("✅ Dossier_Medical successfully archived and deleted.");
-            });
-          });
-        });
-      });
+    connectionArchive.query(query, (err, results) => {
+      if (err) return reject("❌ Error fetching archived utilisateurs: " + err);
+      resolve(results);
     });
   });
 };
-
 
 exports.transferDossierMedical = async (email) => {
   return new Promise((resolve, reject) => {
@@ -432,24 +376,34 @@ exports.transferDossierMedical = async (email) => {
 
       // Step 2: Fetch the Patient record using the Utilisateur.id
       const patientQuery = "SELECT * FROM Patient WHERE utilisateur_id = ?";
-      connection.query(patientQuery, [utilisateur.id], (err, patientResults) => {
-        if (err) return reject("❌ Error fetching patient: " + err);
-        if (patientResults.length === 0) return reject("❌ Patient not found");
+      connection.query(
+        patientQuery,
+        [utilisateur.id],
+        (err, patientResults) => {
+          if (err) return reject("❌ Error fetching patient: " + err);
+          if (patientResults.length === 0)
+            return reject("❌ Patient not found");
 
-        const patient = patientResults[0];
+          const patient = patientResults[0];
 
-        // Now we have the patient_id (patient.id) for use in the Dossier_Medical
+          // Now we have the patient_id (patient.id) for use in the Dossier_Medical
 
-        // Step 3: Fetch the Dossier_Medical record for the Patient
-        const dossierQuery = "SELECT * FROM Dossier_Medical WHERE patient_id = ?";
-        connection.query(dossierQuery, [patient.id], (err, dossierResults) => {
-          if (err) return reject("❌ Error fetching Dossier_Medical: " + err);
-          if (dossierResults.length === 0) return reject("❌ Dossier_Medical not found");
+          // Step 3: Fetch the Dossier_Medical record for the Patient
+          const dossierQuery =
+            "SELECT * FROM Dossier_Medical WHERE patient_id = ?";
+          connection.query(
+            dossierQuery,
+            [patient.id],
+            (err, dossierResults) => {
+              if (err)
+                return reject("❌ Error fetching Dossier_Medical: " + err);
+              if (dossierResults.length === 0)
+                return reject("❌ Dossier_Medical not found");
 
-          const dossier = dossierResults[0];
+              const dossier = dossierResults[0];
 
-          // Step 4: Archive the Dossier_Medical record into the archive database
-          const archiveDossierQuery = `
+              // Step 4: Archive the Dossier_Medical record into the archive database
+              const archiveDossierQuery = `
             INSERT INTO archive.Dossier_Medical 
             (date_creation, groupeSanguin, numSecuriteSociale, lieu_naissance, adresse, situation_famille, 
             date_admis, taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
@@ -458,51 +412,71 @@ exports.transferDossierMedical = async (email) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
 
-          connectionArchive.query(archiveDossierQuery, [
-            dossier.date_creation, 
-            dossier.groupeSanguin, 
-            dossier.numSecuriteSociale, 
-            dossier.lieu_naissance, 
-            dossier.adresse, 
-            dossier.situation_famille,
-            dossier.date_admis, 
-            dossier.taille, 
-            dossier.poids, 
-            dossier.tabac_fume, 
-            dossier.tabac_fume_nombre, 
-            dossier.tabac_chique, 
-            dossier.tabac_chique_nombre,
-            dossier.tabac_pris, 
-            dossier.tabac_pris_nombre, 
-            dossier.age_pris, 
-            dossier.ancien_fume, 
-            dossier.periode_exposition, 
-            dossier.alcool, 
-            dossier.medicaments,
-            dossier.affectionsCongenitales, 
-            dossier.maladiesGenerales, 
-            dossier.interventionsChirurgicales, 
-            dossier.reactionsAllergiques, 
-            dossier.notes, 
-            patient.id // Here we ensure that we are passing the correct patient_id
-          ], (insertErr) => {
-            if (insertErr) return reject("❌ Error archiving Dossier_Medical: " + insertErr);
+              connectionArchive.query(
+                archiveDossierQuery,
+                [
+                  dossier.date_creation,
+                  dossier.groupeSanguin,
+                  dossier.numSecuriteSociale,
+                  dossier.lieu_naissance,
+                  dossier.adresse,
+                  dossier.situation_famille,
+                  dossier.date_admis,
+                  dossier.taille,
+                  dossier.poids,
+                  dossier.tabac_fume,
+                  dossier.tabac_fume_nombre,
+                  dossier.tabac_chique,
+                  dossier.tabac_chique_nombre,
+                  dossier.tabac_pris,
+                  dossier.tabac_pris_nombre,
+                  dossier.age_pris,
+                  dossier.ancien_fume,
+                  dossier.periode_exposition,
+                  dossier.alcool,
+                  dossier.medicaments,
+                  dossier.affectionsCongenitales,
+                  dossier.maladiesGenerales,
+                  dossier.interventionsChirurgicales,
+                  dossier.reactionsAllergiques,
+                  dossier.notes,
+                  patient.id, // Here we ensure that we are passing the correct patient_id
+                ],
+                (insertErr) => {
+                  if (insertErr)
+                    return reject(
+                      "❌ Error archiving Dossier_Medical: " + insertErr
+                    );
 
-            // Step 5: Delete the Dossier_Medical record from the original database
-            const deleteDossierQuery = "DELETE FROM Dossier_Medical WHERE id = ?";
-            connection.query(deleteDossierQuery, [dossier.id], (deleteErr) => {
-              if (deleteErr) return reject("❌ Error deleting Dossier_Medical: " + deleteErr);
+                  // Step 5: Delete the Dossier_Medical record from the original database
+                  const deleteDossierQuery =
+                    "DELETE FROM Dossier_Medical WHERE id = ?";
+                  connection.query(
+                    deleteDossierQuery,
+                    [dossier.id],
+                    (deleteErr) => {
+                      if (deleteErr)
+                        return reject(
+                          "❌ Error deleting Dossier_Medical: " + deleteErr
+                        );
 
-              console.log("✅ Dossier_Medical successfully archived and deleted.");
-              resolve("✅ Dossier_Medical successfully archived and deleted.");
-            });
-          });
-        });
-      });
+                      console.log(
+                        "✅ Dossier_Medical successfully archived and deleted."
+                      );
+                      resolve(
+                        "✅ Dossier_Medical successfully archived and deleted."
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
     });
   });
 };
-
 
 /*
 exports.findArchivedUser = async (email) => {
