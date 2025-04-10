@@ -17,6 +17,7 @@ const {
 const router = express.Router();
 const {
   authMiddleware,
+  adminMiddleware,
   doctorMiddleware,
 } = require("../middlewares/authMiddleware");
 const {
