@@ -17,7 +17,7 @@ exports.findUserByEmail = async (email) => {
   });
 };
 exports.findUserByEmailArchived = async (email) => {
-  console.log("im looking inside archive")
+  console.log("im looking inside archive");
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Utilisateur WHERE email = ?";
     console.log(connectionArchive);
@@ -25,11 +25,10 @@ exports.findUserByEmailArchived = async (email) => {
       if (err) {
         reject(err);
       } else {
-        console.log('results is',results);
+        console.log("results is", results);
         resolve(results.length > 0 ? results[0] : null);
       }
       console.log(results);
-
     });
   });
 };
@@ -215,8 +214,9 @@ exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
       SELECT p.matricule , u.email, p.nom, p.prenom 
-      FROM Patient p
-      JOIN Utilisateur u ON p.utilisateur_id = u.id
+      FROM Utilisateur u 
+      JOIN Patient u ON p.utilisateur_id = u.id 
+       JOIN Directeur u ON p.utilisateur_id = u.id 
       WHERE u.verified = 1
     `;
 
@@ -234,9 +234,9 @@ exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
      SELECT p.matricule , u.email, p.nom, p.prenom 
-      FROM Patient p
-      JOIN Utilisateur u ON p.utilisateur_id = u.id
-      
+      FROM Utilisateur u 
+      JOIN Patient u ON p.utilisateur_id = u.id 
+       JOIN Directeur u ON p.utilisateur_id = u.id 
     `;
 
     connection.query(sql, (err, results) => {
