@@ -14,6 +14,7 @@ const {
 } = require("../controllers/passwordController");
 const {
   modifyProfileInformations,
+  getUserProfileController,
 } = require("../controllers/modifyProfileController");
 const {
   uploadImage,
@@ -38,6 +39,7 @@ router.post("/set-new-password", setNewPassword);
 
 // Profile management routes
 router.patch("/modify-profile/:email", modifyProfileInformations);
+router.get("/modify-profile/:email", getUserProfileController);
 
 // Image upload route
 router.post("/upload-id-photo", uploadMiddleware, uploadImage);

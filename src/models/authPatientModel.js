@@ -16,6 +16,9 @@ exports.findUserByEmail = async (email) => {
     });
   });
 };
+
+
+
 exports.findUserByEmailArchived = async (email) => {
   console.log("im looking inside archive");
   return new Promise((resolve, reject) => {
@@ -421,5 +424,33 @@ exports.saveUserProfile = async ({
         }
       }
     );
+  });
+};
+exports.getUserProfile = async (email) => {
+  return new Promise((resolve, reject) => {
+    // SQL query to get user and patient info by email
+    const sql = `
+      SELECT 
+        u.id AS utilisateur_id,
+        u.email,
+        p.nom,
+        p.prenom,
+        p.num_tel
+      FROM Utilisateur u
+      INNER JOIN Patient p ON u.id = p.utilisateur_id
+      WHERE u.email = ?;
+    `;
+
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error("Error fetching user profile:", err);
+        reject(err);
+      } else if (results.length === 0) {
+        console.log("No user found with this email.");
+        resolve(null);
+      } else {
+        resolve(results[0]); // Return the first result (should only be one)
+      }
+    });
   });
 };

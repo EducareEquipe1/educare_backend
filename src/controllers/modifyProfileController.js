@@ -47,3 +47,24 @@ exports.modifyProfileInformations = asyncHandler(async (req, res) => {
     console.log(error);
   }
 });
+
+exports.getUserProfileController = async (req, res) => {
+  try {
+    const email = req.params.email; // or req.query.email, or from token/session depending on how you're handling auth
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const userProfile = await Patient.getUserProfile(email);
+
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error('Error in getUserProfileController:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
