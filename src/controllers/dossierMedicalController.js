@@ -5,10 +5,9 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
 
 exports.createMedicalRecord = async (req, res) => {
-<<<<<<< HEAD
+
   const { email } = req.params;
-=======
->>>>>>> 4ebc6c4db38f2bf1c1076f3893eadaea4e80634d
+
   const {
     date_creation,
     groupeSanguin,
@@ -33,11 +32,10 @@ exports.createMedicalRecord = async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-<<<<<<< HEAD
+
   
-=======
-    email,
->>>>>>> 4ebc6c4db38f2bf1c1076f3893eadaea4e80634d
+
+
   } = req.body;
 
   try {
@@ -117,11 +115,7 @@ exports.createMedicalRecord = async (req, res) => {
       reactionsAllergiques,
       notes,
       patient_id: user.id,
-<<<<<<< HEAD
      
-=======
-      email,
->>>>>>> 4ebc6c4db38f2bf1c1076f3893eadaea4e80634d
       nom: user.nom,  // Automatically fill the nom
       prenom: user.prenom,  // Automatically fill the prenom
       num_tel: user.num_tel,  // Automatically fill the num_tel
@@ -186,9 +180,9 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Error updating medical record" });
   }
-<<<<<<< HEAD
+
 });
 
-=======
-});
->>>>>>> 4ebc6c4db38f2bf1c1076f3893eadaea4e80634d
+
+
+
