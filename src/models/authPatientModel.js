@@ -16,8 +16,11 @@ exports.findUserByEmail = async (email) => {
     });
   });
 };
+
+
+
 exports.findUserByEmailArchived = async (email) => {
-  console.log("im looking inside archive")
+  console.log("im looking inside archive");
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Utilisateur WHERE email = ?";
     console.log(connectionArchive);
@@ -25,11 +28,10 @@ exports.findUserByEmailArchived = async (email) => {
       if (err) {
         reject(err);
       } else {
-        console.log('results is',results);
+        console.log("results is", results);
         resolve(results.length > 0 ? results[0] : null);
       }
       console.log(results);
-
     });
   });
 };
@@ -169,13 +171,13 @@ exports.getUtilisateurs = async () => {
           'unknown'
         ) AS role
       FROM 
-        archive.Utilisateur u
+        defaultdb.Utilisateur u
       LEFT JOIN 
-        archive.Directeur d ON u.id = d.utilisateur_id
+        defaultdb.Directeur d ON u.id = d.utilisateur_id
       LEFT JOIN 
-        archive.Medecin m ON u.id = m.utilisateur_id
+        defaultdb.Medecin m ON u.id = m.utilisateur_id
       LEFT JOIN 
-        archive.Patient p ON u.id = p.utilisateur_id
+        defaultdb.Patient p ON u.id = p.utilisateur_id
       WHERE
         u.email != 'ni.merzouk@esi-sba.dz'
     `;
@@ -211,13 +213,17 @@ exports.changeUserPassword = (userData) => {
   });
 };
 
-exports.getActivePatients = async () => {
+exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
-      FROM Patient p
-      JOIN Utilisateur u ON p.utilisateur_id = u.id
-      WHERE u.verified = 1
+      SELECT 
+        COALESCE(p.matricule, d.matricule) AS matricule,
+        u.email, 
+        COALESCE(p.nom, d.nom) AS nom, 
+        COALESCE(p.prenom, d.prenom) AS prenom
+      FROM Utilisateur u
+      LEFT JOIN Patient p ON u.id = p.utilisateur_id
+      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
     `;
 
     connection.query(sql, (err, results) => {
@@ -230,13 +236,18 @@ exports.getActivePatients = async () => {
   });
 };
 
-exports.getAllPatients = async () => {
+exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-     SELECT p.matricule , u.email, p.nom, p.prenom , p.archive
-      FROM Patient p
-      JOIN Utilisateur u ON p.utilisateur_id = u.id
-      
+      SELECT 
+        COALESCE(p.matricule, d.matricule) AS matricule,
+        u.email, 
+        COALESCE(p.nom, d.nom) AS nom, 
+        COALESCE(p.prenom, d.prenom) AS prenom
+      FROM Utilisateur u
+      LEFT JOIN Patient p ON u.id = p.utilisateur_id
+      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
+      WHERE u.verified = 1
     `;
 
     connection.query(sql, (err, results) => {
@@ -413,5 +424,33 @@ exports.saveUserProfile = async ({
         }
       }
     );
+  });
+};
+exports.getUserProfile = async (email) => {
+  return new Promise((resolve, reject) => {
+    // SQL query to get user and patient info by email
+    const sql = `
+      SELECT 
+        u.id AS utilisateur_id,
+        u.email,
+        p.nom,
+        p.prenom,
+        p.num_tel
+      FROM Utilisateur u
+      INNER JOIN Patient p ON u.id = p.utilisateur_id
+      WHERE u.email = ?;
+    `;
+
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error("Error fetching user profile:", err);
+        reject(err);
+      } else if (results.length === 0) {
+        console.log("No user found with this email.");
+        resolve(null);
+      } else {
+        resolve(results[0]); // Return the first result (should only be one)
+      }
+    });
   });
 };
