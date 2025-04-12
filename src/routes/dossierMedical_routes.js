@@ -35,7 +35,7 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    email,
+    
     statut
   } = req.body;
 
@@ -66,7 +66,7 @@ router.post("/create", authMiddleware, doctorMiddleware, async (req, res) => {
       reactionsAllergiques,
       notes,
      patient_id,
-      email
+      
     });
     res.status(201).json(dossier);  // Send the created dossier back as a response
   } catch (error) {

@@ -119,17 +119,15 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
   
     
   email: {
-    type: DataTypes.STRING(255),
-    references: {
-      model: 'Utilisateur',  
-      key: 'email',
-    },
-    onDelete: 'CASCADE',
+    type: DataTypes.STRING,
+    allowNull: false, // optional, but good to ensure it's not null
   },
+  
   patient_id: {
     type: DataTypes.INTEGER,
     allowNull: true, 
   },
+  
   
   
 }, {
