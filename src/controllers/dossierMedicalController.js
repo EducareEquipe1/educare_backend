@@ -4,6 +4,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
 
 exports.createMedicalRecord = async (req, res) => {
+  const { email } = req.params;
   const {
     date_creation,
     groupeSanguin,
@@ -28,7 +29,7 @@ exports.createMedicalRecord = async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
-    email,
+  
   } = req.body;
 
   try {
@@ -108,7 +109,7 @@ exports.createMedicalRecord = async (req, res) => {
       reactionsAllergiques,
       notes,
       patient_id: user.id,
-      email,
+     
       nom: user.nom,  // Automatically fill the nom
       prenom: user.prenom,  // Automatically fill the prenom
       num_tel: user.num_tel,  // Automatically fill the num_tel
@@ -172,34 +173,3 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   }
 });
 
-// controllers/dossierMedicalController.js
-
-exports.getAllMedicalRecords = asyncHandler(async (req, res) => {
-  try {
-    const records = await db.query(
-      `
-      SELECT 
-        dm.id,
-        dm.date_creation,
-        dm.statut,
-        dm.email,
-        dm.nom,
-        dm.prenom,
-        dm.num_tel,
-        p.matricule,
-        p.categorie AS role
-      FROM Dossier_Medicals dm
-      LEFT JOIN Patient p ON dm.email = p.email
-      ORDER BY dm.date_creation DESC
-      `,
-      {
-        type: db.QueryTypes.SELECT,
-      }
-    );
-
-    res.status(200).json(records);
-  } catch (error) {
-    console.error("Error fetching medical records:", error);
-    res.status(500).json({ message: "Erreur lors de la récupération des dossiers médicaux" });
-  }
-});

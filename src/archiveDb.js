@@ -1,7 +1,7 @@
 const mysql = require("mysql2");
 
 // Load database configuration
-const config = require("./config/config.json")[
+const config = require("./config/config")[
   process.env.NODE_ENV || "development"
 ];
 
