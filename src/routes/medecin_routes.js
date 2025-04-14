@@ -6,7 +6,7 @@ const {
   adminMiddleware,
   doctorMiddleware,
 } = require("../middlewares/authMiddleware");
-const { getMedicalRecord, createMedicalRecord } = require("../controllers/dossierMedicalController");
+const { getUserMedicalInfo,getMedicalRecord, createMedicalRecord } = require("../controllers/dossierMedicalController");
 const {updateMedicalRecord} = require("../controllers/dossierMedicalController");
 
 
@@ -14,5 +14,5 @@ router.post("/register",authMiddleware, adminMiddleware, (req, res) => register(
 router.post("/dossier-medical-create/:email",authMiddleware, doctorMiddleware,createMedicalRecord );
 router.get("/get-dossier-medical/:email",authMiddleware, doctorMiddleware,getMedicalRecord );
 router.put("/medical-records-update/:email",authMiddleware, doctorMiddleware,updateMedicalRecord );
-
+router.get("/get-user-info/:email",authMiddleware, doctorMiddleware,getUserMedicalInfo);
 module.exports = router; // Make sure you're exporting the router correctly

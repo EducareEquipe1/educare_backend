@@ -3,7 +3,65 @@ const { findUserByEmail } = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
 
-// CREATE medical record
+exports.getUserMedicalInfo = async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const utilisateur = await findUserByEmail(email);
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur not found" });
+    }
+
+    const utilisateur_id = utilisateur.id;
+    let user = null;
+    let statut = "";
+
+    const patientData = await db.query(
+      "SELECT * FROM Patient WHERE utilisateur_id = ?",
+      {
+        replacements: [utilisateur_id],
+        type: db.QueryTypes.SELECT,
+      }
+    );
+
+    if (patientData.length > 0) {
+      user = patientData[0];
+      statut = user.categorie;
+    }
+
+    if (!user) {
+      const directeurData = await db.query(
+        "SELECT * FROM Directeur WHERE utilisateur_id = ?",
+        {
+          replacements: [utilisateur_id],
+          type: db.QueryTypes.SELECT,
+        }
+      );
+      if (directeurData.length > 0) {
+        user = directeurData[0];
+        statut = "directeur";
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found in relevant table" });
+    }
+
+    res.status(200).json({
+      nom: user.nom,
+      prenom: user.prenom,
+      num_tel: user.num_tel,
+      date_naissance: user.date_naissance,
+      statut,
+      email,
+    });
+  } catch (error) {
+    console.error("Error fetching user info:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
 
@@ -34,19 +92,15 @@ exports.createMedicalRecord = async (req, res) => {
   } = req.body;
 
   try {
-    // Step 1: Find the user from the Utilisateur table based on email
-    console.log("Email received:", email);
+    // Find user by email
     const utilisateur = await findUserByEmail(email);
-    console.log("Utilisateur found:", utilisateur);
-
     if (!utilisateur) {
       return res.status(404).json({ message: "Utilisateur not found with this email" });
     }
 
     const utilisateur_id = utilisateur.id;
-    const userEmail = utilisateur.email; 
 
-    // Step 2: Check if the user exists in Patient or Directeur tables
+    // Determine if user is in Patient or Directeur
     let user = null;
     let statut = "";
 
@@ -71,7 +125,6 @@ exports.createMedicalRecord = async (req, res) => {
           type: db.QueryTypes.SELECT,
         }
       );
-
       if (directeurData.length > 0) {
         user = directeurData[0];
         statut = "directeur";
@@ -79,11 +132,11 @@ exports.createMedicalRecord = async (req, res) => {
     }
 
     if (!user) {
-      return res.status(404).json({ message: "User not found in any relevant table" });
+      return res.status(404).json({ message: "User not found in Patient or Directeur" });
     }
 
-    // Step 2.5: Check if the user already has a linked dossierMedical_id
-    const [patientWithRecord] = await db.query(
+    // Prevent duplication
+    const [alreadyExists] = await db.query(
       "SELECT * FROM Patient WHERE utilisateur_id = ? AND dossierMedical_id IS NOT NULL",
       {
         replacements: [utilisateur_id],
@@ -99,13 +152,13 @@ exports.createMedicalRecord = async (req, res) => {
       }
     );
 
-    if (patientWithRecord || directeurWithRecord) {
+    if (alreadyExists || directeurWithRecord) {
       return res.status(400).json({
-        message: "A medical record already exists for this user (either as patient or directeur)",
+        message: "A medical record already exists for this user",
       });
     }
- console.log(email);
-    // Step 3: Create the medical record
+
+    // Create medical record
     const newDossier = await DossierMedical.create({
       date_creation,
       groupeSanguin,
@@ -134,13 +187,12 @@ exports.createMedicalRecord = async (req, res) => {
       nom: user.nom,
       prenom: user.prenom,
       num_tel: user.num_tel,
-      email: email,
+      email: utilisateur.email,
       date_naissance: user.date_naissance,
-      statut,
-      
+      statut, // filled automatically
     });
 
-    // Step 4: Update corresponding table to link the dossierMedical_id
+    // Update corresponding table
     if (statut === "directeur") {
       await db.query(
         "UPDATE Directeur SET dossierMedical_id = ? WHERE utilisateur_id = ?",
@@ -166,6 +218,9 @@ exports.createMedicalRecord = async (req, res) => {
   }
 };
 
+
+
+  
 // GET medical record by email
 exports.getMedicalRecord = asyncHandler(async (req, res) => {
   const { email } = req.params;
