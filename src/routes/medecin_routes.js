@@ -17,13 +17,8 @@ router.get("/get-dossier-medical/:email",authMiddleware, doctorMiddleware,getMed
 router.put("/medical-records-update/:email",authMiddleware, doctorMiddleware,updateMedicalRecord );
 router.get("/get-user-info/:email",authMiddleware, doctorMiddleware,getUserMedicalInfo);
 
-const {
-  getMedicalRecord,
-  createMedicalRecord,
-} = require("../controllers/dossierMedicalController");
-const {
-  updateMedicalRecord,
-} = require("../controllers/dossierMedicalController");
+
+
 const { getUtilisateur } = require("../controllers/getUsersController");
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
