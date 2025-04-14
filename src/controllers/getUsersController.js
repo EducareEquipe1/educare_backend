@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const Patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 
-
 exports.getActivePatients = asyncHandler(async (req, res) => {
   const activePatients = await Patient.getActivePatients();
   res.json(activePatients);
@@ -33,3 +32,75 @@ exports.getUtilisateurs = async (req, res) => {
   }
 };
 
+exports.getUtilisateur = async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    let rawUser = null;
+
+    const result = await Patient.findUserByEmail(email);
+
+    if (result) {
+      result.isActif = true;
+      const userId = result.id;
+
+      const patient = await Patient.findPatientByUtilisateurId(userId);
+      if (patient) {
+        result.photo = patient.photo;
+        result.nom = patient.nom;
+        result.prenom = patient.prenom;
+      } else {
+        const directeur = await Patient.findDirecteurByUtilisateurId(userId);
+        if (directeur) {
+          result.photo = directeur.photo;
+          result.nom = directeur.nom;
+          result.prenom = directeur.prenom;
+        }
+      }
+
+      rawUser = result;
+    } else {
+      const archived = await Patient.findUserByEmailArchived(email);
+      if (archived) {
+        archived.isActif = false;
+        const userId = archived.id;
+
+        const patient = await Patient.findPatientByUtilisateurIdArchived(userId);
+        if (patient) {
+          archived.photo = patient.photo;
+          archived.nom = patient.nom;
+          archived.prenom = patient.prenom;
+        } else {
+          const directeur = await Patient.findDirecteurByUtilisateurIdArchived(userId);
+          if (directeur) {
+            archived.photo = directeur.photo;
+            archived.nom = directeur.nom;
+            archived.prenom = directeur.prenom;
+          }
+        }
+
+        rawUser = archived;
+      }
+    }
+
+    // If user was found, send only selected fields
+    if (rawUser) {
+      const utilisateur = {
+        id: rawUser.id,
+        email: rawUser.email,
+        isActif: rawUser.isActif,
+        nom: rawUser.nom,
+        prenom: rawUser.prenom,
+        photo: rawUser.photo
+      };
+
+      res.status(200).json({ utilisateur });
+    } else {
+      res.status(404).json({ error: "Utilisateur not found" });
+    }
+
+  } catch (error) {
+    console.error("❌ Error fetching utilisateur:", error);
+    res.status(500).json({ error: error.toString() });
+  }
+};

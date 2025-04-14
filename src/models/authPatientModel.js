@@ -16,8 +16,54 @@ exports.findUserByEmail = async (email) => {
     });
   });
 };
-
-
+exports.findPatientByUtilisateurId = async (utilisateur_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM Patient  WHERE utilisateur_id = ?";
+    connection.query(sql, [utilisateur_id], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results.length > 0 ? results[0] : null);
+      }
+    });
+  });
+};
+exports.findPatientByUtilisateurIdArchived = async (utilisateur_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM Patient  WHERE utilisateur_id = ?";
+    connectionArchive.query(sql, [utilisateur_id], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results.length > 0 ? results[0] : null);
+      }
+    });
+  });
+};
+exports.findDirecteurByUtilisateurId = async (utilisateur_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM Directeur  WHERE utilisateur_id = ?";
+    connection.query(sql, [utilisateur_id], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results.length > 0 ? results[0] : null);
+      }
+    });
+  });
+};
+exports.findDirecteurByUtilisateurIdArchived = async (utilisateur_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM Directeur  WHERE utilisateur_id = ?";
+    connectionArchive.query(sql, [utilisateur_id], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results.length > 0 ? results[0] : null);
+      }
+    });
+  });
+};
 
 exports.findUserByEmailArchived = async (email) => {
   console.log("im looking inside archive");
