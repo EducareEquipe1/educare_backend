@@ -14,8 +14,8 @@ exports.archiveUtilisateur = async (req, res) => {
     }
     const result = await transferUtilisateur(email);
     res.status(200).json({ message: result });
-    console.log("email is ", email);
-    console.log("result is ", result);
+    const result_dossier = await transferDossierMedical(email);
+
   } catch (error) {
     console.error("❌ Error archiving user:", error);
     res.status(500).json({ error: error.toString() });
@@ -43,16 +43,7 @@ exports.restoreUtilisateur = async (req, res) => {
   }
 };
 
-exports.archiveDossierMedicalController = async (req, res) => {
-  const { email } = req.params;
 
-  try {
-    const result = await transferDossierMedical(email);
-    res.status(200).json({ message: result });
-  } catch (error) {
-    res.status(500).json({ error: error.toString() });
-  }
-};
 
 exports.getArchivedUtilisateurs = async (req, res) => {
   try {
