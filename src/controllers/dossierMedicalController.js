@@ -52,8 +52,8 @@ exports.getUserMedicalInfo = async (req, res) => {
       prenom: user.prenom,
       num_tel: user.num_tel,
       date_naissance: user.date_naissance,
-      statut,
-      email,
+      statut
+      
     });
   } catch (error) {
     console.error("Error fetching user info:", error);
@@ -135,28 +135,21 @@ exports.createMedicalRecord = async (req, res) => {
       return res.status(404).json({ message: "User not found in Patient or Directeur" });
     }
 
-    // Prevent duplication
-    const [alreadyExists] = await db.query(
-      "SELECT * FROM Patient WHERE utilisateur_id = ? AND dossierMedical_id IS NOT NULL",
-      {
-        replacements: [utilisateur_id],
-        type: db.QueryTypes.SELECT,
-      }
-    );
+    // Prevent duplication by checking the Dossier_Medical table
+const [existingDossier] = await db.query(
+  "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
+  {
+    replacements: [utilisateur_id],
+    type: db.QueryTypes.SELECT,
+  }
+);
 
-    const [directeurWithRecord] = await db.query(
-      "SELECT * FROM Directeur WHERE utilisateur_id = ? AND dossierMedical_id IS NOT NULL",
-      {
-        replacements: [utilisateur_id],
-        type: db.QueryTypes.SELECT,
-      }
-    );
+if (existingDossier) {
+  return res.status(400).json({
+    message: "A medical record already exists for this user",
+  });
+}
 
-    if (alreadyExists || directeurWithRecord) {
-      return res.status(400).json({
-        message: "A medical record already exists for this user",
-      });
-    }
 
     // Create medical record
     const newDossier = await DossierMedical.create({
@@ -183,34 +176,16 @@ exports.createMedicalRecord = async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
-      patient_id: user.id,
+      utilisateur_id: utilisateur_id,
       nom: user.nom,
       prenom: user.prenom,
       num_tel: user.num_tel,
-      email: utilisateur.email,
+     
       date_naissance: user.date_naissance,
       statut, // filled automatically
     });
 
-    // Update corresponding table
-    if (statut === "directeur") {
-      await db.query(
-        "UPDATE Directeur SET dossierMedical_id = ? WHERE utilisateur_id = ?",
-        {
-          replacements: [newDossier.id, utilisateur_id],
-          type: db.QueryTypes.UPDATE,
-        }
-      );
-    } else {
-      await db.query(
-        "UPDATE Patient SET dossierMedical_id = ? WHERE utilisateur_id = ?",
-        {
-          replacements: [newDossier.id, utilisateur_id],
-          type: db.QueryTypes.UPDATE,
-        }
-      );
-    }
-
+    
     res.status(201).json(newDossier);
   } catch (error) {
     console.error("Error creating medical record:", error);

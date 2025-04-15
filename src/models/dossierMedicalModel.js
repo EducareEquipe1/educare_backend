@@ -118,14 +118,11 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
   },
   
     
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false, // optional, but good to ensure it's not null
-  },
   
-  patient_id: {
+  
+  utilisateur_id: {
     type: DataTypes.INTEGER,
-    allowNull: true, 
+    allowNull: false, 
   },
   
   
