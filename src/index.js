@@ -61,6 +61,8 @@ app.get("/api/cloudinary-health", (req, res) => {
     });
 });
 
+require("./tasks/cleanupTokens");
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {

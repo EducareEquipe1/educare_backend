@@ -4,6 +4,7 @@ const Patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const sendEmail = require("../utils/emailService");
 const validator = require("validator");
+const BlacklistToken = require("../models/blacklistTokenModel");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 
@@ -150,4 +151,31 @@ exports.getPatientProfile = asyncHandler(async (req, res) => {
   });
 });
 
+exports.logout = asyncHandler(async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(400).json({ error: "Authorization header missing" });
+    }
 
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({ error: "Token manquant" });
+    }
+
+    // Decode the token to get expiry
+    const decoded = jwt.decode(token);
+    if (!decoded || !decoded.exp) {
+      return res.status(400).json({ error: "Token invalide" });
+    }
+
+    const expiresAt = new Date(decoded.exp * 1000);
+
+    await BlacklistToken.add(token, expiresAt);
+
+    res.status(200).json({ message: "Déconnecté avec succès" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ error: "Erreur lors de la déconnexion" });
+  }
+});
