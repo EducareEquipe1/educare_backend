@@ -18,7 +18,9 @@ exports.register = asyncHandler(async (req, res, userType) => {
     birth_date,
     phone,
     matricule,
+    categorie,  // Add category to the destructured fields
   } = req.body;
+
   if (
     !email ||
     !last_name ||
@@ -26,33 +28,34 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !password ||
     !birth_date ||
     !phone ||
-    !matricule
+    !matricule ||
+    (userType === "Patient" && !categorie)  // Check if category is required for Patient
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
+
   const isValidEmail = (email) => {
     return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
   };
+
   if (!isValidEmail(email)) {
     return res
       .status(400)
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
+
   const existingPatient = await Patient.findUserByEmail(email);
-  console.log("existing patinet is", existingPatient);
   const existingPatientArchived = await Patient.findUserByEmailArchived(email);
-  console.log(
-    "existing patient that are archived are",
-    existingPatientArchived
-  );
+
   if (existingPatientArchived) {
-    return res.status(400).json({ error: "User already exists " });
+    return res.status(400).json({ error: "User already exists in archived records." });
   }
   if (existingPatient) {
     return res.status(400).json({ error: "User already exists" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+
   const newPatient = await Patient.createPatient(
     {
       prenom: first_name,
@@ -62,20 +65,22 @@ exports.register = asyncHandler(async (req, res, userType) => {
       date_naissance: birth_date,
       num_tel: phone,
       matricule,
+      categorie,  // Include the category when creating the patient
     },
     userType
   );
+
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
+
   let message;
-  if (userType == "Patient") {
+  if (userType === "Patient") {
     await sendEmail(
       email,
       "Email Verification",
       `Dear ${first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
     );
-    message =
-      "User registered successfully. Please check your email for activation.";
+    message = "User registered successfully. Please check your email for activation.";
   } else {
     message = "User registered successfully.";
   }
@@ -86,6 +91,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     matricule: newPatient.matricule,
   });
 });
+
 
 // ✅ Login Patient
 exports.login = asyncHandler(async (req, res) => {
