@@ -5,18 +5,20 @@ const {
   restoreUtilisateur,
   transferDossierMedical,
 } = require("../models/archiveModel");
+
+
 exports.archiveUtilisateur = async (req, res) => {
   try {
     const email = req.params.email;
     if (email === "ni.merzouk@esi-sba.dz") {
-      return res.status(400).json({ error: "you can't archive the admin" });
+      return res.status(400).json({ error: "You can't archive the admin" });
     }
 
     // ⚠️ Transfer user first to avoid FK error
     const resultUtilisateur = await transferUtilisateur(email);
-    const resultDossier = await transferDossierMedical(email);
 
-    res.status(200).json({ message: `${resultUtilisateur} | ${resultDossier}` });
+    // Send the full result object directly
+    res.status(200).json(resultUtilisateur);
   } catch (error) {
     console.error("❌ Error archiving user:", error);
     res.status(500).json({ error: error.toString() });
@@ -43,8 +45,6 @@ exports.restoreUtilisateur = async (req, res) => {
     res.status(500).json({ error: error.toString() });
   }
 };
-
-
 
 exports.getArchivedUtilisateurs = async (req, res) => {
   try {
