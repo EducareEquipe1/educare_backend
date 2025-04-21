@@ -127,8 +127,8 @@ exports.createPatient = (patientData, userType) => {
 
         if (userType === "Patient") {
           userTypeSql = `
-            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
-            VALUES (?, ?, ?, ?, ?, ?);
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel , categorie) 
+            VALUES (?, ?, ?, ?, ?, ? , ?);
           `;
           typeValues = [
             utilisateurId,
@@ -137,6 +137,7 @@ exports.createPatient = (patientData, userType) => {
             patientData.prenom,
             patientData.date_naissance,
             patientData.num_tel,
+            patientData.categorie,
           ];
         } else if (userType === "Medecin") {
           userTypeSql = `

@@ -13,6 +13,7 @@ const {
   archiveUtilisateur,
   restoreUtilisateur,
   getArchivedUtilisateurs,
+
 } = require("../controllers/archiveController");
 const router = express.Router();
 const {
@@ -77,10 +78,5 @@ router.get(
 
 router.get("/get-users", authMiddleware, adminMiddleware, getUtilisateurs);
 
-router.post(
-  "/archive-dossier-medical/:email",
-  authMiddleware,
-  adminMiddleware,
-  getArchivedUtilisateurs
-);
+
 module.exports = router; // ✅ Make sure you're exporting the router correctly

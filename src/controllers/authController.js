@@ -4,6 +4,7 @@ const Patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const sendEmail = require("../utils/emailService");
 const validator = require("validator");
+const BlacklistToken = require("../models/blacklistTokenModel");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 
@@ -17,7 +18,9 @@ exports.register = asyncHandler(async (req, res, userType) => {
     birth_date,
     phone,
     matricule,
+    categorie,  // Add category to the destructured fields
   } = req.body;
+
   if (
     !email ||
     !last_name ||
@@ -25,33 +28,34 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !password ||
     !birth_date ||
     !phone ||
-    !matricule
+    !matricule ||
+    (userType === "Patient" && !categorie)  // Check if category is required for Patient
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
+
   const isValidEmail = (email) => {
     return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
   };
+
   if (!isValidEmail(email)) {
     return res
       .status(400)
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
+
   const existingPatient = await Patient.findUserByEmail(email);
-  console.log("existing patinet is", existingPatient);
   const existingPatientArchived = await Patient.findUserByEmailArchived(email);
-  console.log(
-    "existing patient that are archived are",
-    existingPatientArchived
-  );
+
   if (existingPatientArchived) {
-    return res.status(400).json({ error: "User already exists " });
+    return res.status(400).json({ error: "User already exists in archived records." });
   }
   if (existingPatient) {
     return res.status(400).json({ error: "User already exists" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+
   const newPatient = await Patient.createPatient(
     {
       prenom: first_name,
@@ -61,20 +65,22 @@ exports.register = asyncHandler(async (req, res, userType) => {
       date_naissance: birth_date,
       num_tel: phone,
       matricule,
+      categorie,  // Include the category when creating the patient
     },
     userType
   );
+
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
+
   let message;
-  if (userType == "Patient") {
+  if (userType === "Patient") {
     await sendEmail(
       email,
       "Email Verification",
       `Dear ${first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
     );
-    message =
-      "User registered successfully. Please check your email for activation.";
+    message = "User registered successfully. Please check your email for activation.";
   } else {
     message = "User registered successfully.";
   }
@@ -85,6 +91,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     matricule: newPatient.matricule,
   });
 });
+
 
 // ✅ Login Patient
 exports.login = asyncHandler(async (req, res) => {
@@ -150,4 +157,31 @@ exports.getPatientProfile = asyncHandler(async (req, res) => {
   });
 });
 
+exports.logout = asyncHandler(async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(400).json({ error: "Authorization header missing" });
+    }
 
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({ error: "Token manquant" });
+    }
+
+    // Decode the token to get expiry
+    const decoded = jwt.decode(token);
+    if (!decoded || !decoded.exp) {
+      return res.status(400).json({ error: "Token invalide" });
+    }
+
+    const expiresAt = new Date(decoded.exp * 1000);
+
+    await BlacklistToken.add(token, expiresAt);
+
+    res.status(200).json({ message: "Déconnecté avec succès" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ error: "Erreur lors de la déconnexion" });
+  }
+});

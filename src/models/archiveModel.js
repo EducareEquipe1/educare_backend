@@ -11,12 +11,101 @@ exports.transferUtilisateur = async (email) => {
       if (userResults.length === 0) return reject("❌ User not found");
 
       const utilisateur = userResults[0];
+      console.log(utilisateur.id);
 
-      // Insert into archive.Utilisateur
+      function handleDossierTransfer(ownerId) {
+        const dossierQuery =
+          "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?";
+        connection.query(dossierQuery, [ownerId], (err, dossierResults) => {
+          if (err) return reject("❌ Error fetching Dossier_Medical: " + err);
+
+          if (dossierResults.length === 0) {
+            console.log(
+              `ℹ️ User with id ${ownerId} does not have a Dossier_Medical.`
+            );
+            // Don't return or reject, just continue
+            return;
+          }
+
+          const dossier = dossierResults[0];
+
+          const archiveDossierQuery = `
+            INSERT INTO archive.Dossier_Medical 
+            (id, date_creation, groupeSanguin, numSecuriteSociale, adresse, situation_famille, 
+             taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
+             tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, 
+             medicaments, affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, 
+             reactionsAllergiques, notes, statut, date_naissance, nom, prenom, num_tel, utilisateur_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+
+          connectionArchive.query(
+            archiveDossierQuery,
+            [
+              dossier.id,
+              dossier.date_creation,
+              dossier.groupeSanguin,
+              dossier.numSecuriteSociale,
+              dossier.adresse,
+              dossier.situation_famille,
+              dossier.taille,
+              dossier.poids,
+              dossier.tabac_fume,
+              dossier.tabac_fume_nombre,
+              dossier.tabac_chique,
+              dossier.tabac_chique_nombre,
+              dossier.tabac_pris,
+              dossier.tabac_pris_nombre,
+              dossier.age_pris,
+              dossier.ancien_fume,
+              dossier.periode_exposition,
+              dossier.alcool,
+              dossier.medicaments,
+              dossier.affectionsCongenitales,
+              dossier.maladiesGenerales,
+              dossier.interventionsChirurgicales,
+              dossier.reactionsAllergiques,
+              dossier.notes,
+              dossier.statut,
+              dossier.date_naissance,
+              dossier.nom,
+              dossier.prenom,
+              dossier.num_tel,
+              ownerId,
+            ],
+            (insertErr) => {
+              if (insertErr)
+                return reject(
+                  "❌ Error archiving Dossier_Medical: " + insertErr
+                );
+
+              const deleteDossierQuery =
+                "DELETE FROM Dossier_Medical WHERE id = ?";
+              connection.query(
+                deleteDossierQuery,
+                [dossier.id],
+                (deleteErr) => {
+                  if (deleteErr)
+                    return reject(
+                      "❌ Error deleting Dossier_Medical: " + deleteErr
+                    );
+
+                  console.log("✅ Dossier_Medical archived and deleted.");
+                }
+              );
+            }
+          );
+        });
+      }
+
+      // Start transferring dossier first
+      handleDossierTransfer(utilisateur.id);
+
+      // Then insert user into archive
       const insertUserQuery = `
-          INSERT INTO archive.Utilisateur (id, email, password, verified)
-          VALUES (?, ?, ?, ?)
-        `;
+        INSERT INTO archive.Utilisateur (id, email, password, verified)
+        VALUES (?, ?, ?, ?)
+      `;
       connectionArchive.query(
         insertUserQuery,
         [
@@ -29,13 +118,13 @@ exports.transferUtilisateur = async (email) => {
           if (insertUserErr)
             return reject("❌ Error archiving Utilisateur: " + insertUserErr);
 
-          // Check which table the user is in
           const tables = ["Patient", "Medecin", "Directeur"];
           const checkTable = (index) => {
             if (index >= tables.length) return reject("❌ User role not found");
 
             const table = tables[index];
             const roleQuery = `SELECT * FROM ${table} WHERE utilisateur_id = ?`;
+
             connection.query(
               roleQuery,
               [utilisateur.id],
@@ -45,19 +134,14 @@ exports.transferUtilisateur = async (email) => {
                 if (roleResults.length === 0) return checkTable(index + 1);
 
                 const role = roleResults[0];
-
-                // Log the role data for debugging
-                console.log(`Role data for ${table}:`, role);
-
-                // Insert into archive.[role]
                 let insertRoleQuery = "";
                 let insertParams = [];
 
                 if (table === "Medecin") {
                   insertRoleQuery = `
-                      INSERT INTO archive.Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)
-                    `;
+                  INSERT INTO archive.Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
+                `;
                   insertParams = [
                     role.id,
                     role.matricule,
@@ -69,9 +153,9 @@ exports.transferUtilisateur = async (email) => {
                   ];
                 } else if (table === "Patient") {
                   insertRoleQuery = `
-                      INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `;
+                  INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
                   insertParams = [
                     role.id,
                     role.utilisateur_id,
@@ -85,9 +169,9 @@ exports.transferUtilisateur = async (email) => {
                   ];
                 } else if (table === "Directeur") {
                   insertRoleQuery = `
-                      INSERT INTO archive.Directeur (id, matricule, utilisateur_id, nom, prenom, num_tel, photo_profil, date_naissance)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    `;
+                  INSERT INTO archive.Directeur (id, matricule, utilisateur_id, nom, prenom, num_tel, photo_profil, date_naissance)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `;
                   insertParams = [
                     role.id,
                     role.matricule,
@@ -100,12 +184,6 @@ exports.transferUtilisateur = async (email) => {
                   ];
                 }
 
-                console.log(
-                  `Executing query for ${table}:`,
-                  insertRoleQuery,
-                  insertParams
-                );
-
                 connectionArchive.query(
                   insertRoleQuery,
                   insertParams,
@@ -115,7 +193,6 @@ exports.transferUtilisateur = async (email) => {
                         `❌ Error archiving ${table}: ` + insertRoleErr
                       );
 
-                    // Delete from role table
                     const deleteRoleQuery = `DELETE FROM ${table} WHERE id = ?`;
                     connection.query(
                       deleteRoleQuery,
@@ -126,7 +203,6 @@ exports.transferUtilisateur = async (email) => {
                             `❌ Error deleting from ${table}: ` + deleteRoleErr
                           );
 
-                        // Delete from Utilisateur table
                         const deleteUserQuery =
                           "DELETE FROM Utilisateur WHERE id = ?";
                         connection.query(
@@ -138,12 +214,10 @@ exports.transferUtilisateur = async (email) => {
                                 "❌ Error deleting user: " + deleteUserErr
                               );
 
-                            console.log(
-                              `✅ User and ${table} successfully archived.`
-                            );
-                            resolve(
-                              `✅ User and ${table} successfully archived.`
-                            );
+                            resolve({
+                              message: `✅ User and ${table} successfully archived.`,
+                              utilisateurId: utilisateur.id,
+                            });
                           }
                         );
                       }
@@ -163,166 +237,214 @@ exports.transferUtilisateur = async (email) => {
 
 exports.restoreUtilisateur = async (email) => {
   return new Promise((resolve, reject) => {
-    try {
-      console.log("⬅️ Start restoring user");
+    console.log("🔁 Start restoring user");
 
-      if (typeof email !== "string" || email.trim() === "") {
-        return reject("❌ Invalid email format");
-      }
+    const userQuery = "SELECT * FROM archive.Utilisateur WHERE email = ?";
+    connectionArchive.query(userQuery, [email], async (err, userResults) => {
+      if (err) return reject("❌ Error fetching user from archive: " + err);
+      if (userResults.length === 0) return reject("❌ Archived user not found");
 
-      const userQuery = "SELECT * FROM archive.Utilisateur WHERE email = ?";
-      connectionArchive.query(userQuery, [email], (err, userResults) => {
-        if (err) return reject("❌ Error fetching archived user: " + err);
-        if (userResults.length === 0)
-          return reject("❌ Archived user not found");
+      const utilisateur = userResults[0];
 
-        const utilisateur = userResults[0];
+      // Restore user first
+      const restoreUserQuery = `
+        INSERT INTO Utilisateur (id, email, password, verified)
+        VALUES (?, ?, ?, ?)
+      `;
+      connection.query(
+        restoreUserQuery,
+        [
+          utilisateur.id,
+          utilisateur.email,
+          utilisateur.password,
+          utilisateur.verified,
+        ],
+        (restoreUserErr) => {
+          if (restoreUserErr)
+            return reject("❌ Error restoring Utilisateur: " + restoreUserErr);
 
-        // Insert into main.Utilisateur
-        const insertUserQuery = `
-            INSERT INTO Utilisateur (id, email, password, verified)
-            VALUES (?, ?, ?, ?)
-          `;
-        connection.query(
-          insertUserQuery,
-          [
-            utilisateur.id,
-            utilisateur.email,
-            utilisateur.password,
-            utilisateur.verified,
-          ],
-          (insertUserErr) => {
-            if (insertUserErr)
-              return reject("❌ Error restoring Utilisateur: " + insertUserErr);
+          // Restore Dossier_Medical if exists
+          const dossierQuery = `SELECT * FROM archive.Dossier_Medical WHERE utilisateur_id = ?`;
+          connectionArchive.query(
+            dossierQuery,
+            [utilisateur.id],
+            (err, dossierResults) => {
+              if (err)
+                return reject("❌ Error fetching archived dossier: " + err);
 
-            // Check which role table the user belongs to in archive
-            const tables = ["Patient", "Medecin", "Directeur"];
-            const checkTable = (index) => {
-              if (index >= tables.length)
-                return reject("❌ User role not found in archive");
+              if (dossierResults.length > 0) {
+                const dossier = dossierResults[0];
 
-              const table = tables[index];
-              const roleQuery = `SELECT * FROM archive.${table} WHERE utilisateur_id = ?`;
-              connectionArchive.query(
-                roleQuery,
-                [utilisateur.id],
-                (roleErr, roleResults) => {
-                  if (roleErr)
-                    return reject(
-                      `❌ Error querying archive.${table}: ` + roleErr
+                const insertDossierQuery = `
+                INSERT INTO Dossier_Medical 
+                (id, date_creation, groupeSanguin, numSecuriteSociale, adresse, situation_famille, 
+                 taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
+                 tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, 
+                 medicaments, affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, 
+                 reactionsAllergiques, notes, statut, date_naissance, nom, prenom, num_tel, utilisateur_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `;
+                connection.query(
+                  insertDossierQuery,
+                  [
+                    dossier.id,
+                    dossier.date_creation,
+                    dossier.groupeSanguin,
+                    dossier.numSecuriteSociale,
+                    dossier.adresse,
+                    dossier.situation_famille,
+                    dossier.taille,
+                    dossier.poids,
+                    dossier.tabac_fume,
+                    dossier.tabac_fume_nombre,
+                    dossier.tabac_chique,
+                    dossier.tabac_chique_nombre,
+                    dossier.tabac_pris,
+                    dossier.tabac_pris_nombre,
+                    dossier.age_pris,
+                    dossier.ancien_fume,
+                    dossier.periode_exposition,
+                    dossier.alcool,
+                    dossier.medicaments,
+                    dossier.affectionsCongenitales,
+                    dossier.maladiesGenerales,
+                    dossier.interventionsChirurgicales,
+                    dossier.reactionsAllergiques,
+                    dossier.notes,
+                    dossier.statut,
+                    dossier.date_naissance,
+                    dossier.nom,
+                    dossier.prenom,
+                    dossier.num_tel,
+                    utilisateur.id,
+                  ],
+                  (insertErr) => {
+                    if (insertErr)
+                      return reject("❌ Error restoring dossier: " + insertErr);
+
+                    // Delete from archive
+                    connectionArchive.query(
+                      "DELETE FROM archive.Dossier_Medical WHERE id = ?",
+                      [dossier.id]
                     );
-                  if (roleResults.length === 0) return checkTable(index + 1);
-
-                  const role = roleResults[0];
-
-                  // Insert into main.[role]
-                  let insertRoleQuery = "";
-                  let insertParams = [];
-
-                  if (table === "Medecin") {
-                    insertRoleQuery = `
-                      INSERT INTO Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)
-                    `;
-                    insertParams = [
-                      role.id,
-                      role.matricule,
-                      role.speciality,
-                      role.utilisateur_id,
-                      role.nom,
-                      role.prenom,
-                      role.num_tel,
-                    ];
-                  } else if (table === "Patient") {
-                    insertRoleQuery = `
-                      INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `;
-                    insertParams = [
-                      role.id,
-                      role.utilisateur_id,
-                      role.categorie,
-                      role.matricule,
-                      role.nom,
-                      role.prenom,
-                      role.num_tel,
-                      role.date_naissance,
-                      role.photo,
-                    ];
-                  } else if (table === "Directeur") {
-                    insertRoleQuery = `
-                      INSERT INTO Directeur (id, matricule, utilisateur_id, nom, prenom, num_tel, photo_profil, date_naissance)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    `;
-                    insertParams = [
-                      role.id,
-                      role.matricule,
-                      role.utilisateur_id,
-                      role.nom,
-                      role.prenom,
-                      role.num_tel,
-                      role.photo_profil,
-                      role.date_naissance,
-                    ];
                   }
+                );
+              }
 
-                  connection.query(
-                    insertRoleQuery,
-                    insertParams,
-                    (insertRoleErr) => {
-                      if (insertRoleErr)
-                        return reject(
-                          `❌ Error restoring ${table}: ` + insertRoleErr
+              // Now restore the role
+              const tables = ["Patient", "Medecin", "Directeur"];
+              const checkTable = (index) => {
+                if (index >= tables.length)
+                  return reject("❌ Archived role not found");
+
+                const table = tables[index];
+                const roleQuery = `SELECT * FROM archive.${table} WHERE utilisateur_id = ?`;
+
+                connectionArchive.query(
+                  roleQuery,
+                  [utilisateur.id],
+                  (roleErr, roleResults) => {
+                    if (roleErr)
+                      return reject(
+                        `❌ Error fetching ${table} from archive: ` + roleErr
+                      );
+                    if (roleResults.length === 0) return checkTable(index + 1);
+
+                    const role = roleResults[0];
+                    let insertRoleQuery = "";
+                    let insertParams = [];
+
+                    if (table === "Medecin") {
+                      insertRoleQuery = `
+                    INSERT INTO Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                  `;
+                      insertParams = [
+                        role.id,
+                        role.matricule,
+                        role.speciality,
+                        role.utilisateur_id,
+                        role.nom,
+                        role.prenom,
+                        role.num_tel,
+                      ];
+                    } else if (table === "Patient") {
+                      insertRoleQuery = `
+                    INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  `;
+                      insertParams = [
+                        role.id,
+                        role.utilisateur_id,
+                        role.categorie,
+                        role.matricule,
+                        role.nom,
+                        role.prenom,
+                        role.num_tel,
+                        role.date_naissance,
+                        role.photo,
+                      ];
+                    } else if (table === "Directeur") {
+                      insertRoleQuery = `
+                    INSERT INTO Directeur (id, matricule, utilisateur_id, nom, prenom, num_tel, photo_profil, date_naissance)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  `;
+                      insertParams = [
+                        role.id,
+                        role.matricule,
+                        role.utilisateur_id,
+                        role.nom,
+                        role.prenom,
+                        role.num_tel,
+                        role.photo_profil,
+                        role.date_naissance,
+                      ];
+                    }
+
+                    connection.query(
+                      insertRoleQuery,
+                      insertParams,
+                      (insertRoleErr) => {
+                        if (insertRoleErr)
+                          return reject(
+                            `❌ Error restoring ${table}: ` + insertRoleErr
+                          );
+
+                        // Delete role from archive
+                        connectionArchive.query(
+                          `DELETE FROM archive.${table} WHERE id = ?`,
+                          [role.id]
                         );
 
-                      // Delete from archive.[role]
-                      const deleteRoleQuery = `DELETE FROM archive.${table} WHERE id = ?`;
-                      connectionArchive.query(
-                        deleteRoleQuery,
-                        [role.id],
-                        (deleteRoleErr) => {
-                          if (deleteRoleErr)
-                            return reject(
-                              `❌ Error deleting from archive.${table}: ` +
-                                deleteRoleErr
-                            );
-
-                          // Delete from archive.Utilisateur
-                          const deleteUserQuery =
-                            "DELETE FROM archive.Utilisateur WHERE id = ?";
-                          connectionArchive.query(
-                            deleteUserQuery,
-                            [utilisateur.id],
-                            (deleteUserErr) => {
-                              if (deleteUserErr)
-                                return reject(
-                                  "❌ Error deleting archived user: " +
-                                    deleteUserErr
-                                );
-
-                              console.log(
-                                `✅ User and ${table} successfully restored.`
+                        // Finally, delete the archived user
+                        connectionArchive.query(
+                          "DELETE FROM archive.Utilisateur WHERE id = ?",
+                          [utilisateur.id],
+                          (deleteUserErr) => {
+                            if (deleteUserErr)
+                              return reject(
+                                "❌ Error deleting user from archive: " +
+                                  deleteUserErr
                               );
-                              resolve(
-                                `✅ User and ${table} successfully restored.`
-                              );
-                            }
-                          );
-                        }
-                      );
-                    }
-                  );
-                }
-              );
-            };
 
-            checkTable(0);
-          }
-        );
-      });
-    } catch (err) {
-      reject("❌ An unexpected error occurred: " + err.message);
-    }
+                            resolve({
+                              message: `✅ User and ${table} successfully restored.`,
+                              utilisateurId: utilisateur.id,
+                            });
+                          }
+                        );
+                      }
+                    );
+                  }
+                );
+              };
+
+              checkTable(0);
+            }
+          );
+        }
+      );
+    });
   });
 };
 
@@ -362,122 +484,6 @@ exports.getArchivedUtilisateurs = async () => {
   });
 };
 
-exports.transferDossierMedical = async (email) => {
-  return new Promise((resolve, reject) => {
-    console.log("➡️ Start transferring Dossier_Medical");
-
-    // Step 1: Fetch the Utilisateur record by email
-    const userQuery = "SELECT * FROM Utilisateur WHERE email = ?";
-    connection.query(userQuery, [email], (err, userResults) => {
-      if (err) return reject("❌ Error fetching user: " + err);
-      if (userResults.length === 0) return reject("❌ User not found");
-
-      const utilisateur = userResults[0];
-
-      // Step 2: Fetch the Patient record using the Utilisateur.id
-      const patientQuery = "SELECT * FROM Patient WHERE utilisateur_id = ?";
-      connection.query(
-        patientQuery,
-        [utilisateur.id],
-        (err, patientResults) => {
-          if (err) return reject("❌ Error fetching patient: " + err);
-          if (patientResults.length === 0)
-            return reject("❌ Patient not found");
-
-          const patient = patientResults[0];
-
-          // Now we have the patient_id (patient.id) for use in the Dossier_Medical
-
-          // Step 3: Fetch the Dossier_Medical record for the Patient
-          const dossierQuery =
-            "SELECT * FROM Dossier_Medical WHERE patient_id = ?";
-          connection.query(
-            dossierQuery,
-            [patient.id],
-            (err, dossierResults) => {
-              if (err)
-                return reject("❌ Error fetching Dossier_Medical: " + err);
-              if (dossierResults.length === 0)
-                return reject("❌ Dossier_Medical not found");
-
-              const dossier = dossierResults[0];
-
-              // Step 4: Archive the Dossier_Medical record into the archive database
-              const archiveDossierQuery = `
-            INSERT INTO archive.Dossier_Medical 
-            (date_creation, groupeSanguin, numSecuriteSociale, lieu_naissance, adresse, situation_famille, 
-            date_admis, taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
-            tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, medicaments, 
-            affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, reactionsAllergiques, notes, patient_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-
-              connectionArchive.query(
-                archiveDossierQuery,
-                [
-                  dossier.date_creation,
-                  dossier.groupeSanguin,
-                  dossier.numSecuriteSociale,
-                  dossier.lieu_naissance,
-                  dossier.adresse,
-                  dossier.situation_famille,
-                  dossier.date_admis,
-                  dossier.taille,
-                  dossier.poids,
-                  dossier.tabac_fume,
-                  dossier.tabac_fume_nombre,
-                  dossier.tabac_chique,
-                  dossier.tabac_chique_nombre,
-                  dossier.tabac_pris,
-                  dossier.tabac_pris_nombre,
-                  dossier.age_pris,
-                  dossier.ancien_fume,
-                  dossier.periode_exposition,
-                  dossier.alcool,
-                  dossier.medicaments,
-                  dossier.affectionsCongenitales,
-                  dossier.maladiesGenerales,
-                  dossier.interventionsChirurgicales,
-                  dossier.reactionsAllergiques,
-                  dossier.notes,
-                  patient.id, // Here we ensure that we are passing the correct patient_id
-                ],
-                (insertErr) => {
-                  if (insertErr)
-                    return reject(
-                      "❌ Error archiving Dossier_Medical: " + insertErr
-                    );
-
-                  // Step 5: Delete the Dossier_Medical record from the original database
-                  const deleteDossierQuery =
-                    "DELETE FROM Dossier_Medical WHERE id = ?";
-                  connection.query(
-                    deleteDossierQuery,
-                    [dossier.id],
-                    (deleteErr) => {
-                      if (deleteErr)
-                        return reject(
-                          "❌ Error deleting Dossier_Medical: " + deleteErr
-                        );
-
-                      console.log(
-                        "✅ Dossier_Medical successfully archived and deleted."
-                      );
-                      resolve(
-                        "✅ Dossier_Medical successfully archived and deleted."
-                      );
-                    }
-                  );
-                }
-              );
-            }
-          );
-        }
-      );
-    });
-  });
-};
-
 /*
 exports.findArchivedUser = async (email) => {
     return new Promise((resolve, reject) => {
@@ -513,6 +519,3 @@ exports.findArchivedUser = async (email) => {
   };
   
 */
-
-
-

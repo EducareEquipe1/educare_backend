@@ -3,6 +3,7 @@ const {
   register,
   login,
   getActivePatients,
+  logout
 } = require("../controllers/authController");
 const {
   sendEmailVerification,
@@ -44,5 +45,8 @@ router.get("/modify-profile/:email", getUserProfileController);
 // Image upload route
 router.post("/upload-id-photo", uploadMiddleware, uploadImage);
 router.get("/get-patient-photo/:id", getPatientPhoto);
+
+router.post("/logout", logout);
+
 
 module.exports = router;
