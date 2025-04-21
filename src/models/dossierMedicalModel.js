@@ -117,13 +117,16 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     allowNull: false,
   },
   
-    
-  
-  
   utilisateur_id: {
     type: DataTypes.INTEGER,
-    allowNull: false, 
-  },
+    allowNull: false,
+    references: {
+      model: "Utilisateur", 
+      key: "id",
+    }, }
+  
+  
+ 
   
   
   
