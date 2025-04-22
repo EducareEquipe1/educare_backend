@@ -1,9 +1,8 @@
 const mysql = require("mysql2");
 
 // Load database configuration
-const config = require("./config/config")[
-  process.env.NODE_ENV || "development"
-];
+const config =
+  require("./config/config")[process.env.NODE_ENV || "development"];
 
 // Create MySQL connection
 const connection = mysql.createConnection({
