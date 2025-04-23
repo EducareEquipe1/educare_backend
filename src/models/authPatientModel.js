@@ -501,3 +501,57 @@ exports.getUserProfile = async (email) => {
     });
   });
 };
+
+exports.getUserRoleByEmail = async (email) => {
+  return new Promise((resolve, reject) => {
+    const getUserIdSql = "SELECT id FROM Utilisateur WHERE email = ?";
+
+    connection.query(getUserIdSql, [email], (err, users) => {
+      if (err) {
+        console.error("Error fetching user ID:", err);
+        return reject(err);
+      }
+
+      if (users.length === 0) {
+        return resolve(null);
+      }
+
+      const userId = users[0].id;
+
+      const roleChecks = [
+        { table: "Patient", role: "patient" },
+        { table: "Medecin", role: "medecin" },
+        { table: "Admin", role: "admin" },
+        { table: "Directeur", role: "directeur" },
+        { table: "AideSoignant", role: "aide_soignant" },
+      ];
+
+      let found = false;
+
+      const checkNextRole = (index) => {
+        if (index >= roleChecks.length) {
+          return resolve(null); // No role found
+        }
+
+        const { table, role } = roleChecks[index];
+        const roleQuery = `SELECT 1 FROM ${table} WHERE utilisateur_id = ? LIMIT 1`;
+
+        connection.query(roleQuery, [userId], (err, rows) => {
+          if (err) {
+            console.error(`Error checking ${role} role:`, err);
+            return reject(err);
+          }
+
+          if (rows.length > 0) {
+            found = true;
+            return resolve(role);
+          } else {
+            checkNextRole(index + 1); // Check next role
+          }
+        });
+      };
+
+      checkNextRole(0);
+    });
+  });
+};

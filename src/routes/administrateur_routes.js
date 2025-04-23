@@ -13,7 +13,6 @@ const {
   archiveUtilisateur,
   restoreUtilisateur,
   getArchivedUtilisateurs,
-
 } = require("../controllers/archiveController");
 const router = express.Router();
 const {
@@ -25,6 +24,9 @@ const {
   deleteUserByEmail,
   editMedecinStateByEmail,
 } = require("../controllers/editUsersController");
+const {
+  searchUtilisateursByNameOrEmail,
+} = require("../models/searchUsersModel");
 
 router.post("/register", (req, res) => register(req, res, "Admin"));
 router.get(
@@ -77,6 +79,11 @@ router.get(
 );
 
 router.get("/get-users", authMiddleware, adminMiddleware, getUtilisateurs);
-
+router.get(
+  "/search-patient",
+  authMiddleware,
+  adminMiddleware,
+  searchUtilisateursByNameOrEmail
+);
 
 module.exports = router; // ✅ Make sure you're exporting the router correctly

@@ -18,7 +18,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     birth_date,
     phone,
     matricule,
-    categorie,  // Add category to the destructured fields
+    categorie, // Add category to the destructured fields
   } = req.body;
 
   if (
@@ -29,7 +29,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !birth_date ||
     !phone ||
     !matricule ||
-    (userType === "Patient" && !categorie)  // Check if category is required for Patient
+    (userType === "Patient" && !categorie) // Check if category is required for Patient
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
@@ -48,7 +48,9 @@ exports.register = asyncHandler(async (req, res, userType) => {
   const existingPatientArchived = await Patient.findUserByEmailArchived(email);
 
   if (existingPatientArchived) {
-    return res.status(400).json({ error: "User already exists in archived records." });
+    return res
+      .status(400)
+      .json({ error: "User already exists in archived records." });
   }
   if (existingPatient) {
     return res.status(400).json({ error: "User already exists" });
@@ -65,7 +67,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
       date_naissance: birth_date,
       num_tel: phone,
       matricule,
-      categorie,  // Include the category when creating the patient
+      categorie, // Include the category when creating the patient
     },
     userType
   );
@@ -80,7 +82,8 @@ exports.register = asyncHandler(async (req, res, userType) => {
       "Email Verification",
       `Dear ${first_name},\n\nPlease verify your account by clicking the link below:\n\n${activationLink}\n\nBest regards,`
     );
-    message = "User registered successfully. Please check your email for activation.";
+    message =
+      "User registered successfully. Please check your email for activation.";
   } else {
     message = "User registered successfully.";
   }
@@ -91,7 +94,6 @@ exports.register = asyncHandler(async (req, res, userType) => {
     matricule: newPatient.matricule,
   });
 });
-
 
 // ✅ Login Patient
 exports.login = asyncHandler(async (req, res) => {
@@ -121,7 +123,8 @@ exports.login = asyncHandler(async (req, res) => {
   const token = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, {
     expiresIn: "30d",
   });
-
+  const role = await Patient.getUserRoleByEmail(patient.email);
+  console.log("this is my role", role);
   res.status(200).json({
     message: "Login successful",
     token,
@@ -129,6 +132,7 @@ exports.login = asyncHandler(async (req, res) => {
       id: patient.id,
       email: patient.email,
       verified: patient.verified,
+      role : role
     },
   });
 });
