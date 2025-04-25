@@ -17,7 +17,13 @@ const {
 } = require("../controllers/dossierMedicalController");
 const { getUtilisateur } = require("../controllers/getUsersController");
 const { searchPatients } = require("../controllers/searchUsersControllers");
+
 const {programmerRendezVous,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
+
+const {
+  createExamenMedical,
+} = require("../controllers/examenMedicalController");
+
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
@@ -68,6 +74,7 @@ router.put(
   doctorMiddleware,
   updateMedicalRecord
 );
+// ✅ modified to be compatible with new directeur strecture
 router.get(
   "/get-utilisateur/:email",
   authMiddleware,
@@ -76,11 +83,12 @@ router.get(
 );
 
 //we test it this way ! search-patient?q=amine
-router.get(
-  "/search-patient",
+router.get("/search-patient", authMiddleware, doctorMiddleware, searchPatients);
+router.post(
+  "/examen-medical-create/:email",
   authMiddleware,
   doctorMiddleware,
-  searchPatients
+  createExamenMedical
 );
 //programmer un rendezvous
 router.put("/programmerdv/:id_rdv",

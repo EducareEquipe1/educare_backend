@@ -2,8 +2,8 @@ const connection = require("../db"); // Import the database connection
 const connectionArchive = require("../archiveDb"); // Import the database connection
 const bcrypt = require("bcrypt");
 const util = require("util");
-
-// ✅ Find Patient by Email
+//✅all page
+//✅directeur modifications added
 exports.findUserByEmail = async (email) => {
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Utilisateur WHERE email = ?";
@@ -42,7 +42,8 @@ exports.findPatientByUtilisateurIdArchived = async (utilisateur_id) => {
 };
 exports.findDirecteurByUtilisateurId = async (utilisateur_id) => {
   return new Promise((resolve, reject) => {
-    const sql = "SELECT * FROM Directeur  WHERE utilisateur_id = ?";
+    const sql =
+      "SELECT * FROM Patient WHERE utilisateur_id = ?  AND id IN (SELECT patient_id FROM Directeur)";
     connection.query(sql, [utilisateur_id], (err, results) => {
       if (err) {
         reject(err);
@@ -54,7 +55,8 @@ exports.findDirecteurByUtilisateurId = async (utilisateur_id) => {
 };
 exports.findDirecteurByUtilisateurIdArchived = async (utilisateur_id) => {
   return new Promise((resolve, reject) => {
-    const sql = "SELECT * FROM Directeur  WHERE utilisateur_id = ?";
+    const sql =
+      "SELECT * FROM Patient WHERE utilisateur_id = ?  AND id IN (SELECT patient_id FROM Directeur)";
     connectionArchive.query(sql, [utilisateur_id], (err, results) => {
       if (err) {
         reject(err);
@@ -82,7 +84,6 @@ exports.findUserByEmailArchived = async (email) => {
   });
 };
 
-// ✅ Update pation activation
 exports.updatePatientActivation = async (email) => {
   return new Promise((resolve, reject) => {
     const query = "UPDATE Utilisateur SET verified = ? WHERE email = ?";
@@ -98,11 +99,11 @@ exports.updatePatientActivation = async (email) => {
   });
 };
 
-// ✅ Create a new patient (Register Patient)
 exports.createPatient = (patientData, userType) => {
   return new Promise((resolve, reject) => {
     connection.beginTransaction((err) => {
       if (err) return reject(err);
+
       const verified =
         userType === "Admin" || userType === "Medecin" ? true : false;
 
@@ -110,89 +111,63 @@ exports.createPatient = (patientData, userType) => {
         INSERT INTO Utilisateur (email, password, verified)
         VALUES (?, ?, ?);
       `;
+      const userValues = [patientData.email, patientData.password, verified];
 
-      const values = [patientData.email, patientData.password, verified];
-      console.log(values);
-      console.log(userType);
+      connection.query(userSql, userValues, (err, userResult) => {
+        if (err) return connection.rollback(() => reject(err));
 
-      connection.query(userSql, values, (err, result) => {
-        if (err) {
-          return connection.rollback(() => reject(err));
-        }
+        const utilisateurId = userResult.insertId;
 
-        const utilisateurId = result.insertId;
-        let userTypeSql;
-        let typeValues;
-        console.log(utilisateurId);
+        const patientSql = `
+          INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel , categorie) 
+          VALUES (?, ?, ?, ?, ?, ? , ?);
+        `;
+        const patientValues = [
+          utilisateurId,
+          patientData.matricule,
+          patientData.nom,
+          patientData.prenom,
+          patientData.date_naissance,
+          patientData.num_tel,
+          patientData.categorie,
+        ];
 
-        if (userType === "Patient") {
-          userTypeSql = `
-            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel , categorie) 
-            VALUES (?, ?, ?, ?, ?, ? , ?);
-          `;
-          typeValues = [
-            utilisateurId,
-            patientData.matricule,
-            patientData.nom,
-            patientData.prenom,
-            patientData.date_naissance,
-            patientData.num_tel,
-            patientData.categorie,
-          ];
-        } else if (userType === "Medecin") {
-          userTypeSql = `
-            INSERT INTO Medecin (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
-            VALUES (?, ?, ?, ?, ?, ?);
-          `;
-          typeValues = [
-            utilisateurId,
-            patientData.matricule,
-            patientData.nom,
-            patientData.prenom,
-            patientData.date_naissance,
-            patientData.num_tel,
-          ];
-        } else if (userType === "Admin") {
-          userTypeSql = `
-            INSERT INTO Admin (utilisateur_id) 
-            VALUES (?);
-          `;
-          typeValues = [utilisateurId];
-        } else if (userType === "Directeur") {
-          userTypeSql = `
-            INSERT INTO Directeur (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel) 
-            VALUES (?, ?, ?, ?, ?, ?);
-          `;
-          typeValues = [
-            utilisateurId,
-            patientData.matricule,
-            patientData.nom,
-            patientData.prenom,
-            patientData.date_naissance,
-            patientData.num_tel,
-          ];
-        } else {
-          return connection.rollback(() =>
-            reject(new Error("Invalid userType"))
-          );
-        }
+        connection.query(patientSql, patientValues, (err, patientResult) => {
+          if (err) return connection.rollback(() => reject(err));
 
-        console.log(typeValues);
-        connection.query(userTypeSql, typeValues, (err, result) => {
-          if (err) {
-            return connection.rollback(() => reject(err));
-          }
+          const patientId = patientResult.insertId;
 
-          connection.commit((err) => {
-            if (err) {
-              return connection.rollback(() => reject(err));
-            }
+          // If Directeur, insert into Directeur after Patient
+          if (userType === "Directeur") {
+            const directeurSql = `
+              INSERT INTO Directeur (patient_id)
+              VALUES (?);
+            `;
+            connection.query(
+              directeurSql,
+              [patientId],
+              (err, directeurResult) => {
+                if (err) return connection.rollback(() => reject(err));
 
-            resolve({
-              utilisateurId,
-              userTypeId: result.insertId,
+                connection.commit((err) => {
+                  if (err) return connection.rollback(() => reject(err));
+                  resolve({
+                    utilisateurId,
+                    patientId,
+                    directeurId: directeurResult.insertId,
+                  });
+                });
+              }
+            );
+          } else {
+            connection.commit((err) => {
+              if (err) return connection.rollback(() => reject(err));
+              resolve({
+                utilisateurId,
+                patientId,
+              });
             });
-          });
+          }
         });
       });
     });
@@ -204,13 +179,12 @@ exports.getUtilisateurs = async () => {
     const query = `
       SELECT 
         u.id, 
-        COALESCE(d.matricule, m.matricule, p.matricule) AS matricule, 
-        COALESCE(d.nom, m.nom, p.nom) AS nom, 
-        COALESCE(d.prenom, m.prenom, p.prenom) AS prenom,
+        COALESCE( m.matricule, p.matricule) AS matricule, 
+        COALESCE( m.nom, p.nom) AS nom, 
+        COALESCE( m.prenom, p.prenom) AS prenom,
         u.email,
         COALESCE(
           CASE
-            WHEN d.matricule IS NOT NULL THEN 'directeur'
             WHEN m.matricule IS NOT NULL THEN 'medecin'
             WHEN p.matricule IS NOT NULL THEN p.categorie
             ELSE 'unknown'
@@ -219,8 +193,6 @@ exports.getUtilisateurs = async () => {
         ) AS role
       FROM 
         defaultdb.Utilisateur u
-      LEFT JOIN 
-        defaultdb.Directeur d ON u.id = d.utilisateur_id
       LEFT JOIN 
         defaultdb.Medecin m ON u.id = m.utilisateur_id
       LEFT JOIN 
@@ -264,13 +236,12 @@ exports.getAllPatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
       SELECT 
-        COALESCE(p.matricule, d.matricule) AS matricule,
+        p.matricule AS matricule,
         u.email, 
-        COALESCE(p.nom, d.nom) AS nom, 
-        COALESCE(p.prenom, d.prenom) AS prenom
+        p.nom AS nom, 
+        p.prenom AS prenom
       FROM Utilisateur u
       LEFT JOIN Patient p ON u.id = p.utilisateur_id
-      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
     `;
 
     connection.query(sql, (err, results) => {
@@ -286,15 +257,13 @@ exports.getAllPatients = async () => {
 exports.getActivePatients = async () => {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT 
-        COALESCE(p.matricule, d.matricule) AS matricule,
-        u.email, 
-        COALESCE(p.nom, d.nom) AS nom, 
-        COALESCE(p.prenom, d.prenom) AS prenom
-      FROM Utilisateur u
-      LEFT JOIN Patient p ON u.id = p.utilisateur_id
-      LEFT JOIN Directeur d ON u.id = d.utilisateur_id
-      WHERE u.verified = 1
+     SELECT 
+p.matricule AS matricule,
+u.email, 
+p.nom AS nom, 
+p.prenom AS prenom
+FROM Utilisateur u
+LEFT JOIN Patient p ON u.id = p.utilisateur_id WHERE u.verified = 1
     `;
 
     connection.query(sql, (err, results) => {
@@ -327,7 +296,6 @@ exports.getAllMedecins = async () => {
   });
 };
 
-//we shouldnt work wit this right now
 exports.deleteUserByEmail = async (email) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -370,23 +338,6 @@ exports.deleteUserByEmail = async (email) => {
   });
 };
 
-exports.editMedecinsarchiveByEmail = async (email) => {
-  return new Promise((resolve, reject) => {
-    const sql = `
-      UPDATE Medecin 
-      SET archive = NOT state 
-      WHERE utilisateur_id = (SELECT id FROM Utilisateur WHERE email = ?);
-    `;
-
-    connection.query(sql, [email], (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result.affectedRows > 0);
-      }
-    });
-  });
-};
 
 exports.saveUserProfile = async ({
   prenom,
@@ -519,39 +470,55 @@ exports.getUserRoleByEmail = async (email) => {
       const userId = users[0].id;
 
       const roleChecks = [
-        { table: "Patient", role: "patient" },
         { table: "Medecin", role: "medecin" },
         { table: "Admin", role: "admin" },
-        { table: "Directeur", role: "directeur" },
         { table: "AideSoignant", role: "aide_soignant" },
       ];
 
-      let found = false;
+      // First check Patient separately because it needs special logic
+      const patientSql =
+        "SELECT categorie FROM Patient WHERE utilisateur_id = ? LIMIT 1";
 
-      const checkNextRole = (index) => {
-        if (index >= roleChecks.length) {
-          return resolve(null); // No role found
+      connection.query(patientSql, [userId], (err, rows) => {
+        if (err) {
+          console.error("Error checking patient role:", err);
+          return reject(err);
         }
 
-        const { table, role } = roleChecks[index];
-        const roleQuery = `SELECT 1 FROM ${table} WHERE utilisateur_id = ? LIMIT 1`;
-
-        connection.query(roleQuery, [userId], (err, rows) => {
-          if (err) {
-            console.error(`Error checking ${role} role:`, err);
-            return reject(err);
-          }
-
-          if (rows.length > 0) {
-            found = true;
-            return resolve(role);
+        if (rows.length > 0) {
+          const categorie = rows[0].categorie;
+          if (categorie === "Directeur") {
+            return resolve("directeur");
           } else {
-            checkNextRole(index + 1); // Check next role
+            return resolve("patient");
           }
-        });
-      };
+        }
 
-      checkNextRole(0);
+        // If not a patient, check the other roles
+        const checkNextRole = (index) => {
+          if (index >= roleChecks.length) {
+            return resolve(null); // No role found
+          }
+
+          const { table, role } = roleChecks[index];
+          const roleQuery = `SELECT 1 FROM ${table} WHERE utilisateur_id = ? LIMIT 1`;
+
+          connection.query(roleQuery, [userId], (err, rows) => {
+            if (err) {
+              console.error(`Error checking ${role} role:`, err);
+              return reject(err);
+            }
+
+            if (rows.length > 0) {
+              return resolve(role);
+            } else {
+              checkNextRole(index + 1);
+            }
+          });
+        };
+
+        checkNextRole(0); // Begin checking other roles
+      });
     });
   });
 };

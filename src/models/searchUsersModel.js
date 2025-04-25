@@ -1,5 +1,8 @@
 const connection = require("../db.js");
 
+
+//✅all page
+//✅directeur modifications added
 exports.searchPatientsByName = async (q) => {
   const likeQuery = `%${q}%`;
 
@@ -12,15 +15,7 @@ exports.searchPatientsByName = async (q) => {
     JOIN Utilisateur u ON p.utilisateur_id = u.id
     WHERE p.nom LIKE ? OR p.prenom LIKE ?
 
-    UNION
-
-    SELECT 
-      u.email,
-      d.nom AS nom,
-      d.prenom AS prenom
-    FROM Directeur d
-    JOIN Utilisateur u ON d.utilisateur_id = u.id
-    WHERE d.nom LIKE ? OR d.prenom LIKE ?
+    
   `;
 
   return new Promise((resolve, reject) => {
@@ -39,20 +34,13 @@ exports.searchUtilisateursByNameOrEmail = async (q) => {
   const excludedEmail = 'ni.merzouk@esi-sba.dz';
 
   const query = `
-    SELECT u.email, p.nom, p.prenom
+    SELECT u.email, p.nom, p.prenom p.categorie
     FROM Patient p
     JOIN Utilisateur u ON p.utilisateur_id = u.id
     WHERE (p.nom LIKE ? OR p.prenom LIKE ? OR u.email LIKE ?)
       AND u.email != ?
 
-    UNION
-
-    SELECT u.email, d.nom, d.prenom
-    FROM Directeur d
-    JOIN Utilisateur u ON d.utilisateur_id = u.id
-    WHERE (d.nom LIKE ? OR d.prenom LIKE ? OR u.email LIKE ?)
-      AND u.email != ?
-
+ 
     UNION
 
     SELECT u.email, m.nom, m.prenom
