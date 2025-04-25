@@ -231,4 +231,92 @@ exports.listeRendezVous = async (req, res) => {
       res.status(500).json({ error: "Erreur lors de la récupération des demandes." });
     }
   };
+   
+  //liste des rendez vous dun seul patient
+  exports.getRendezVousByPatientEmail = async (req, res) => {
+    const { email } = req.params;
+  
+    try {
+      // Trouver l'utilisateur via son email
+      const utilisateur = await findUserByEmail(email);
+      if (!utilisateur) {
+        return res.status(404).json({ message: "Utilisateur not found" });
+      }
+  
+      const utilisateur_id = utilisateur.id;
+  
+      // Trouver le patient lié à cet utilisateur
+      const patientData = await db.query(
+        "SELECT * FROM Patient WHERE utilisateur_id = ?",
+        {
+          replacements: [utilisateur_id],
+          type: db.QueryTypes.SELECT,
+        }
+      );
+  
+      if (patientData.length === 0) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+  
+      const patient_id = patientData[0].id;
+  
+      // Récupérer tous les rendez-vous du patient
+      const rendezVous = await db.query(
+        "SELECT * FROM RendezVous WHERE patient_id = ? ORDER BY date_heure DESC",
+        {
+          replacements: [patient_id],
+          type: db.QueryTypes.SELECT,
+        }
+      );
+  
+      res.status(200).json(rendezVous);
+    } catch (error) {
+      console.error("Error fetching patient's rendez-vous:", error);
+      res.status(500).json({ message: "Server error while fetching rendez-vous" });
+    }
+  };
+  
+  //liste des demandede rendez vous dun seul patient
+  exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
+    const { email } = req.params;
+  
+    try {
+      // Trouver l'utilisateur via son email
+      const utilisateur = await findUserByEmail(email);
+      if (!utilisateur) {
+        return res.status(404).json({ message: "Utilisateur not found" });
+      }
+  
+      const utilisateur_id = utilisateur.id;
+  
+      // Trouver le patient lié à cet utilisateur
+      const patientData = await db.query(
+        "SELECT * FROM Patient WHERE utilisateur_id = ?",
+        {
+          replacements: [utilisateur_id],
+          type: db.QueryTypes.SELECT,
+        }
+      );
+  
+      if (patientData.length === 0) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+  
+      const patient_id = patientData[0].id;
+  
+      // Récupérer les rendez-vous avec statut "demandé"
+      const demandes = await db.query(
+        "SELECT * FROM RendezVous WHERE patient_id = ? AND statut = 'demandé' ORDER BY date_heure DESC",
+        {
+          replacements: [patient_id],
+          type: db.QueryTypes.SELECT,
+        }
+      );
+  
+      res.status(200).json(demandes);
+    } catch (error) {
+      console.error("Error fetching requested rendez-vous:", error);
+      res.status(500).json({ message: "Server error while fetching rendez-vous" });
+    }
+  };
   
