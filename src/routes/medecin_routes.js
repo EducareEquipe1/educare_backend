@@ -17,6 +17,7 @@ const {
 } = require("../controllers/dossierMedicalController");
 const { getUtilisateur } = require("../controllers/getUsersController");
 const { searchPatients } = require("../controllers/searchUsersControllers");
+const {programmerRendezVous,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
@@ -81,5 +82,40 @@ router.get(
   doctorMiddleware,
   searchPatients
 );
+//programmer un rendezvous
+router.put("/programmerdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware ,
+  programmerRendezVous
+);
+//programmer un rendez vous par medeciin uniquement
+router.post("/programmerdvnondemande/:email",
+  authMiddleware,
+  doctorMiddleware ,
+  programmerRendezVousParMedecin
+);
+//annuler un rendezvous
+router.put("/annulerdv/:id_rdv",annulerRendezVous);
 
-module.exports = router; // Make sure you're exporting the router correctly
+//terminer un rendezvous
+router.put("/terminerdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware, 
+  terminerRendezVous);
+//refuser un rendez vous
+router.put("/refuserdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware, 
+  refuserRendezVous);
+  //get consultation du rendezvous
+  router.get("/consultation/:id_rdv",
+    authMiddleware,
+    getConsultation);
+   // get liste des rendez vous
+    router.get('/listedesrendezvous',
+    listeRendezVous);
+    // gte liste des demandes
+router.get('/listedesdemandes',
+listeDemandesRendezVous);
+
+module.exports = router; 
