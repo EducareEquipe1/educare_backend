@@ -7,8 +7,8 @@ const validator = require("validator");
 const BlacklistToken = require("../models/blacklistTokenModel");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
-
-// ✅ Register Patient
+//✅all page
+//✅modification Directeur added 
 exports.register = asyncHandler(async (req, res, userType) => {
   const {
     first_name,
@@ -18,9 +18,16 @@ exports.register = asyncHandler(async (req, res, userType) => {
     birth_date,
     phone,
     matricule,
-    categorie, // Add category to the destructured fields
+    categorie,
   } = req.body;
 
+  // Use a mutable variable for categorie
+  let finalCategorie = categorie;
+  if (userType === "Directeur") {
+    finalCategorie = "Directeur";
+  }
+
+  // Field validation
   if (
     !email ||
     !last_name ||
@@ -29,11 +36,12 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !birth_date ||
     !phone ||
     !matricule ||
-    (userType === "Patient" && !categorie) // Check if category is required for Patient
+    (userType === "Patient" && !finalCategorie)
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
+  // Email validation
   const isValidEmail = (email) => {
     return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
   };
@@ -44,6 +52,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
 
+  // Check if user exists in main and archived
   const existingPatient = await Patient.findUserByEmail(email);
   const existingPatientArchived = await Patient.findUserByEmailArchived(email);
 
@@ -52,12 +61,15 @@ exports.register = asyncHandler(async (req, res, userType) => {
       .status(400)
       .json({ error: "User already exists in archived records." });
   }
+
   if (existingPatient) {
     return res.status(400).json({ error: "User already exists" });
   }
 
+  // Hash the password
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  // Create the user and patient
   const newPatient = await Patient.createPatient(
     {
       prenom: first_name,
@@ -67,14 +79,16 @@ exports.register = asyncHandler(async (req, res, userType) => {
       date_naissance: birth_date,
       num_tel: phone,
       matricule,
-      categorie, // Include the category when creating the patient
+      categorie: finalCategorie,
     },
     userType
   );
 
+  // Create JWT token
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
 
+  // Email message logic
   let message;
   if (userType === "Patient") {
     await sendEmail(
@@ -88,6 +102,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     message = "User registered successfully.";
   }
 
+  // Final response
   res.status(201).json({
     message: message,
     patientId: newPatient.patientId,
@@ -95,7 +110,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
   });
 });
 
-// ✅ Login Patient
+
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const isValidEmail = (email) => {
@@ -146,7 +161,6 @@ exports.getActivePatients = async (req, res) => {
   }
 };
 
-// ✅ Get Current Patient Info
 exports.getPatientProfile = asyncHandler(async (req, res) => {
   const patient = await Patient.findById(req.user.id);
   if (!patient) {
@@ -158,6 +172,7 @@ exports.getPatientProfile = asyncHandler(async (req, res) => {
     first_name: patient.first_name,
     last_name: patient.last_name,
     email: patient.email,
+    categorie:patient.categorie
   });
 });
 

@@ -7,6 +7,10 @@ const {
 } = require("../models/archiveModel");
 
 
+//✅all page  
+//✅modification Directeur added 
+
+
 exports.archiveUtilisateur = async (req, res) => {
   try {
     const email = req.params.email;

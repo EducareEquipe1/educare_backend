@@ -31,7 +31,7 @@ exports.getUtilisateurs = async (req, res) => {
     res.status(500).json({ error: error.toString() });
   }
 };
-
+// ✅ modified to be compatible with new directeur strecture
 exports.getUtilisateur = async (req, res) => {
   const { email } = req.params;
 
@@ -50,12 +50,6 @@ exports.getUtilisateur = async (req, res) => {
         result.nom = patient.nom;
         result.prenom = patient.prenom;
       } else {
-        const directeur = await Patient.findDirecteurByUtilisateurId(userId);
-        if (directeur) {
-          result.photo = directeur.photo;
-          result.nom = directeur.nom;
-          result.prenom = directeur.prenom;
-        }
       }
 
       rawUser = result;
@@ -65,13 +59,17 @@ exports.getUtilisateur = async (req, res) => {
         archived.isActif = false;
         const userId = archived.id;
 
-        const patient = await Patient.findPatientByUtilisateurIdArchived(userId);
+        const patient = await Patient.findPatientByUtilisateurIdArchived(
+          userId
+        );
         if (patient) {
           archived.photo = patient.photo;
           archived.nom = patient.nom;
           archived.prenom = patient.prenom;
         } else {
-          const directeur = await Patient.findDirecteurByUtilisateurIdArchived(userId);
+          const directeur = await Patient.findDirecteurByUtilisateurIdArchived(
+            userId
+          );
           if (directeur) {
             archived.photo = directeur.photo;
             archived.nom = directeur.nom;
@@ -91,14 +89,13 @@ exports.getUtilisateur = async (req, res) => {
         isActif: rawUser.isActif,
         nom: rawUser.nom,
         prenom: rawUser.prenom,
-        photo: rawUser.photo
+        photo: rawUser.photo,
       };
 
       res.status(200).json({ utilisateur });
     } else {
       res.status(404).json({ error: "Utilisateur not found" });
     }
-
   } catch (error) {
     console.error("❌ Error fetching utilisateur:", error);
     res.status(500).json({ error: error.toString() });
