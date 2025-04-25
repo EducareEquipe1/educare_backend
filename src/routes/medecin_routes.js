@@ -19,9 +19,10 @@ const { getUtilisateur } = require("../controllers/getUsersController");
 
 const { searchPatients, searchMedicaments } = require("../controllers/searchControllers");
 
-
-
 const {programmerRendezVous,getDemandesRendezVousByPatientEmail,getRendezVousByPatientEmail,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
+
+const {programmerRendezVous,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
+
 
 const {
   createExamenMedical,
