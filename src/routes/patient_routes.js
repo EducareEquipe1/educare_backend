@@ -22,6 +22,10 @@ const {
   uploadMiddleware,
   getPatientPhoto,
 } = require("../controllers/faceValidationController");
+const {
+  demanderRendezVous,annulerRendezVous}
+  = require("../controllers/rendezVousController");
+
 
 const router = express.Router();
 
@@ -48,5 +52,11 @@ router.get("/get-patient-photo/:id", getPatientPhoto);
 
 router.post("/logout", logout);
 
+//demande d'un rendezvous
+router.post("/demanderdv/:email",demanderRendezVous );
+
+
+//annuler un rendezvous
+router.put("/annulerdv/:id_rdv",annulerRendezVous);
 
 module.exports = router;
