@@ -19,8 +19,6 @@ const { getUtilisateur } = require("../controllers/getUsersController");
 
 const { searchPatients, searchMedicaments } = require("../controllers/searchControllers");
 
-const { searchPatients } = require("../controllers/searchUsersControllers");
-
 const {programmerRendezVous,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
 
 const {
