@@ -24,9 +24,8 @@ const {
   deleteUserByEmail,
   editMedecinStateByEmail,
 } = require("../controllers/editUsersController");
-const {
-  searchUtilisateursByNameOrEmail,
-} = require("../models/searchUsersModel");
+const { searchUsers } = require("../controllers/searchControllers");
+
 
 router.post("/register", (req, res) => register(req, res, "Admin"));
 router.get(
@@ -83,7 +82,7 @@ router.get(
   "/search-patient",
   authMiddleware,
   adminMiddleware,
-  searchUtilisateursByNameOrEmail
+  searchUsers
 );
 
 module.exports = router; // ✅ Make sure you're exporting the router correctly

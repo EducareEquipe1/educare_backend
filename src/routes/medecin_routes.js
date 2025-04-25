@@ -16,10 +16,17 @@ const {
   updateMedicalRecord,
 } = require("../controllers/dossierMedicalController");
 const { getUtilisateur } = require("../controllers/getUsersController");
-const { searchPatients } = require("../controllers/searchUsersControllers");
+const { searchPatients, searchMedicaments } = require("../controllers/searchControllers");
 const {
   createExamenMedical,
-} = require("../controllers/examenMedicalController");
+  createConsultation,
+  getConsultationsbyEmailController,
+  modifyConsultation,
+  addMedicamentsToOrdonnance,
+  createOrdonnanceController,
+  fetchMedicamentsForOrdonnance,
+} = require("../controllers/consultationController");
+const { deleteOrdonnance } = require("../models/consultationModel");
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
@@ -81,10 +88,56 @@ router.get(
 //we test it this way ! search-patient?q=amine
 router.get("/search-patient", authMiddleware, doctorMiddleware, searchPatients);
 router.post(
+  "/consultation-create/:email",
+  authMiddleware,
+  doctorMiddleware,
+  createConsultation
+);
+router.post(
   "/examen-medical-create/:email",
   authMiddleware,
   doctorMiddleware,
   createExamenMedical
 );
+router.put(
+  "/modify-consultation/:id_consultation",
+  authMiddleware,
+  doctorMiddleware,
+  modifyConsultation
+);
+
+router.get(
+  "/consultations-patient/:email",
+  authMiddleware,
+  doctorMiddleware,
+  getConsultationsbyEmailController
+);
+router.get("/search-medicament", authMiddleware, doctorMiddleware, searchMedicaments);
+
+router.post(
+  "/create-ordenance/:consultation_id",
+  authMiddleware,
+  doctorMiddleware,
+  createOrdonnanceController
+);
+router.post(
+  "/add-medicament",
+  authMiddleware,
+  doctorMiddleware,
+  addMedicamentsToOrdonnance
+);
+router.get(
+  "/get-ordonnance/:id",
+  authMiddleware,
+  doctorMiddleware,
+  fetchMedicamentsForOrdonnance
+);
+router.delete(
+  "/delete-ordonnance/:id",
+  authMiddleware,
+  doctorMiddleware,
+  deleteOrdonnance
+);
+
 
 module.exports = router; // Make sure you're exporting the router correctly

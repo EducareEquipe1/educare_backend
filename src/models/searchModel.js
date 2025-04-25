@@ -63,3 +63,26 @@ exports.searchUtilisateursByNameOrEmail = async (q) => {
     });
   });
 };
+exports.searchMedicamentsByName = async (q) => {
+  const likeQuery = `%${q}%`;
+
+  const query = `
+    SELECT *
+    FROM medicaments
+    WHERE nom_de_marque LIKE ?
+  `;
+
+  console.log("🔍 Running medicament search with:", likeQuery);
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [likeQuery], (err, results) => {
+      if (err) {
+        console.error("❌ SQL Error:", err);
+        return reject("❌ Error fetching medicaments: " + err);
+      }
+
+      console.log("✅ Medicament search successful:", results.length, "results found");
+      resolve(results);
+    });
+  });
+};

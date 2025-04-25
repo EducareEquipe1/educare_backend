@@ -16,6 +16,25 @@ exports.findUserByEmail = async (email) => {
     });
   });
 };
+exports.findPatientByEmail = async (email) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT p.* 
+      FROM Patient p
+      INNER JOIN Utilisateur u 
+        ON p.utilisateur_id = u.id
+      WHERE u.email = ?
+      LIMIT 1
+    `;
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(results.length > 0 ? results[0] : null);
+    });
+  });
+};
+
 exports.findPatientByUtilisateurId = async (utilisateur_id) => {
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Patient  WHERE utilisateur_id = ?";
