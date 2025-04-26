@@ -15,7 +15,6 @@ const {
   deleteOrdonnance,
   deleteConsultation,
 } = require("../models/consultationModel");
-
 exports.createExamenMedical = async (req, res) => {
   const { id } = req.params; // consultation_id
   const {
