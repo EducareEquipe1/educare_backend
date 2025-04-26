@@ -29,8 +29,10 @@ const {
   addMedicamentsToOrdonnance,
   createOrdonnanceController,
   fetchMedicamentsForOrdonnance,
+  deleteOrdonnanceController,
+  deleteConsultationController,
 } = require("../controllers/consultationController");
-const { deleteOrdonnance } = require("../models/consultationModel");
+const { deleteOrdonnance, deleteConsultation } = require("../models/consultationModel");
 
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
@@ -99,7 +101,7 @@ router.post(
   createConsultation
 );
 router.post(
-  "/examen-medical-create/:email",
+  "/examen-medical-create/:id",
   authMiddleware,
   doctorMiddleware,
   createExamenMedical
@@ -120,7 +122,7 @@ router.get(
 router.get("/search-medicament", authMiddleware, doctorMiddleware, searchMedicaments);
 
 router.post(
-  "/create-ordenance/:consultation_id",
+  "/create-ordonnance/:consultation_id",
   authMiddleware,
   doctorMiddleware,
   createOrdonnanceController
@@ -141,7 +143,13 @@ router.delete(
   "/delete-ordonnance/:id",
   authMiddleware,
   doctorMiddleware,
-  deleteOrdonnance
+  deleteOrdonnanceController
+);
+router.delete(
+  "/delete-consultation/:id",
+  authMiddleware,
+  doctorMiddleware,
+  deleteConsultationController
 );
 
 

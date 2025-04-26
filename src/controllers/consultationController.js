@@ -13,12 +13,12 @@ const {
   addMedicaments,
   getMedicamentsByOrdonnance,
   deleteOrdonnance,
+  deleteConsultation,
 } = require("../models/consultationModel");
 
 exports.createExamenMedical = async (req, res) => {
-  const { email } = req.params;
+  const { id } = req.params; // consultation_id
   const {
-    consultation_id,
     poids,
     taille,
     IMC,
@@ -69,68 +69,8 @@ exports.createExamenMedical = async (req, res) => {
   } = req.body;
 
   try {
-    // Find user by email
-    const user = await findUserByEmail(email);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "Utilisateur not found with this email" });
-    }
-    console.log("the user id ", user.id);
-    console.log(
-      "the user  ",
-      poids,
-      taille,
-      IMC,
-      tension,
-      vision_d,
-      vision_g,
-      larmoiement,
-      douleurs,
-      taches_yeux,
-      audition_d,
-      audition_g,
-      sifflements,
-      angines,
-      epistaxis,
-      rhinorrhee,
-      cephalies,
-      vertiges,
-      troubles_sommeil,
-      peau_normal,
-      peau_anormale,
-      douleurs_musculaires,
-      douleurs_articulaires,
-      douleurs_neurologiques,
-      toux,
-      dyspnee,
-      douleurs_thoraciques,
-      palpitations,
-      oedemes,
-      cyanose,
-      pyrosis,
-      vomissements,
-      douleurs_abdominales,
-      dysurie,
-      hematurie,
-      cycles_irreguliers,
-      fonction_respiratoire,
-      fonction_circulatoire,
-      fonction_motrice,
-      sanguins,
-      urinaires,
-      radiologiques,
-      hepatites_pos,
-      hepatites_neg,
-      syphilis_pos,
-      syphilis_neg,
-      vih_pos,
-      vih_neg
-    );
-
-    // Create the medical exam record
     const newExam = await createExamenMedical({
-      consultation_id,
+      consultation_id: id,
       poids,
       taille,
       IMC,
@@ -183,12 +123,18 @@ exports.createExamenMedical = async (req, res) => {
     return res.status(201).json(newExam);
   } catch (error) {
     console.error("Error creating examen medical:", error);
+
+    // ✨ If the examen already exists
+    if (typeof error === "object" && error.code === "EXISTING_EXAM") {
+      return res.status(400).json({ message: error.message });
+    }
+
+    // Otherwise, real server error
     return res
       .status(500)
       .json({ message: "Server error while creating examen medical" });
   }
 };
-
 exports.createConsultation = async (req, res) => {
   const { email } = req.params;
   const {
@@ -261,7 +207,8 @@ exports.modifyConsultation = async (req, res) => {
       motif,
       id_rendezVous,
     });
-    console.log({ id: id_consultation,
+    console.log({
+      id: id_consultation,
       date: new Date(date).toISOString().slice(0, 10), // ensures 'YYYY-MM-DD'
       type,
       symptomes,
@@ -269,7 +216,8 @@ exports.modifyConsultation = async (req, res) => {
       diagnostic,
       piece,
       motif,
-      id_rendezVous});
+      id_rendezVous,
+    });
     return res.status(201).json(Consultation);
   } catch (error) {
     console.error("Error creating consultation:", error);
@@ -322,14 +270,14 @@ exports.getConsultationsbyEmailController = async (req, res) => {
   }
 };
 exports.addMedicamentsToOrdonnance = async (req, res) => {
-  const { id_ordenance, medicament_id, duree } = req.body;
+  const { id_ordonnance, medicament_id, duree } = req.body;
 
-  if (!id_ordenance || !medicament_id || !duree) {
+  if (!id_ordonnance || !medicament_id || !duree) {
     return res.status(400).json({ error: "All fields are required." });
   }
 
   try {
-    const result = await addMedicaments({id_ordenance, medicament_id, duree });
+    const result = await addMedicaments({ id_ordonnance, medicament_id, duree });
     res.status(201).json(result);
   } catch (error) {
     console.error("❌ Error:", error);
@@ -338,7 +286,7 @@ exports.addMedicamentsToOrdonnance = async (req, res) => {
 };
 
 exports.fetchMedicamentsForOrdonnance = async (req, res) => {
-  const { id } = req.params;                // ordonnance_id
+  const { id } = req.params; // ordonnance_id
   const ordonnanceId = parseInt(id, 10);
   if (isNaN(ordonnanceId)) {
     return res.status(400).json({ error: "Invalid ordonnance ID" });
@@ -362,17 +310,41 @@ exports.fetchMedicamentsForOrdonnance = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching medicaments." });
   }
 };
-exports.deleteOrdonnance = async (req, res) => {
-  const ordonnanceId = parseInt(req.params.id, 10);
-  if (isNaN(ordonnanceId)) {
+
+exports.deleteOrdonnanceController = async (req, res) => {
+  const { id } = req.params;
+  console.log("🧹 Deleting ordonnance with id:", id);
+  console.log(id);
+  if (isNaN(id)) {
     return res.status(400).json({ error: "Invalid ordonnance ID" });
   }
 
   try {
-    const result = await deleteOrdonnance(ordonnanceId);
+    const result = await deleteOrdonnance(id);
     return res.status(200).json(result);
   } catch (err) {
     console.error("❌ Error in deleteOrdonnanceController:", err);
-    return res.status(500).json({ error: "Server error while deleting ordonnance" });
+    return res
+      .status(500)
+      .json({ error: "Server error while deleting ordonnance" });
+  }
+};
+
+exports.deleteConsultationController = async (req, res) => {
+  const { id } = req.params;
+  console.log("🧹 Deleting consultation with id:", id);
+  console.log(id);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid consultation ID" });
+  }
+
+  try {
+    const result = await deleteConsultation(id);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("❌ Error in deleteconsultationController:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error while deleting consultation" });
   }
 };

@@ -1,5 +1,8 @@
 const connection = require("../db.js");
 const connectionArchive = require("../archiveDb");
+const Patient = require("../models/authPatientModel");
+const { deleteConsultation } = require("./consultationModel.js");
+
 //✅all page  
 //✅modification Directeur added 
 
@@ -121,149 +124,204 @@ const handleDossierTransfer = (ownerId)=> {
     );
   });
 };
-
-exports.transferUtilisateur = async (email) => {
+const transferConsultationsAndAssociatedData = (userId) => {
   return new Promise((resolve, reject) => {
-    console.log("➡️ Start transferring user");
+    console.log("➡️ Starting transfer of consultations for user:", userId);
 
-    const userQuery = "SELECT * FROM Utilisateur WHERE email = ?";
-    connection.query(userQuery, [email], (err, userResults) => {
-      if (err) return reject("❌ Error fetching user: " + err);
-      if (userResults.length === 0) return reject("❌ User not found");
+    const selectConsultationsSql = `
+      SELECT * FROM Consultation WHERE patient_id = ?
+    `;
 
-      const utilisateur = userResults[0];
-      console.log(utilisateur.id);
+    connection.query(selectConsultationsSql, [userId], async (err, consultations) => {
+      if (err) return reject("❌ Error fetching consultations: " + err);
+      if (consultations.length === 0) {
+        console.log("ℹ️ No consultations to transfer.");
+        return resolve("ℹ️ No consultations to transfer.");
+      }
 
-      // ✅ Don't touch this: Dossier_Medical logic
-      handleDossierTransfer(utilisateur.id);
+      try {
+        for (const consultation of consultations) {
+          const { id_consultation } = consultation;
+          console.log("➡️ Transferring consultation:", id_consultation);
 
-      const insertUserQuery = `
-        INSERT INTO archive.Utilisateur (id, email, password, verified)
-        VALUES (?, ?, ?, ?)
-      `;
-      connectionArchive.query(
-        insertUserQuery,
-        [
-          utilisateur.id,
-          utilisateur.email,
-          utilisateur.password,
-          utilisateur.verified,
-        ],
-        (insertUserErr) => {
-          if (insertUserErr)
-            return reject("❌ Error archiving Utilisateur: " + insertUserErr);
+          // 1️⃣ Transfer Examen_Medical if exists
+          const selectExamenSql = `SELECT * FROM Examen_Medical WHERE consultation_id = ?`;
+         
 
-          const tables = ["Patient", "Medecin"];
-          const checkTable = (index) => {
-            if (index >= tables.length) return reject("❌ User role not found");
+          // 2️⃣ Transfer Consultation itself FIRST
+          const insertConsultationSql = `INSERT INTO archive.Consultation SET ?`;
+          await queryPromise(connectionArchive, insertConsultationSql, consultation);
+          console.log("✅ Transferred Consultation:", id_consultation);
+          
+          const examenRows = await queryPromise(connection, selectExamenSql, [id_consultation]);
 
-            const table = tables[index];
-            const roleQuery = `SELECT * FROM ${table} WHERE utilisateur_id = ?`;
+          if (examenRows.length > 0) {
+            const examen = examenRows[0];
+            const insertExamenSql = `INSERT INTO archive.Examen_Medical SET ?`;
+            await queryPromise(connectionArchive, insertExamenSql, examen);
+            console.log("✅ Transferred Examen_Medical for consultation:", id_consultation);
+          }
+          // 3️⃣ Now Transfer Ordonnance (linked to Consultation)
+          const selectOrdonnanceSql = `SELECT * FROM Ordonnance WHERE consultation_id = ?`;
+          const ordonnanceRows = await queryPromise(connection, selectOrdonnanceSql, [id_consultation]);
 
-            connection.query(
-              roleQuery,
-              [utilisateur.id],
-              (roleErr, roleResults) => {
-                if (roleErr)
-                  return reject(`❌ Error querying ${table}: ` + roleErr);
-                if (roleResults.length === 0) return checkTable(index + 1);
+          if (ordonnanceRows.length > 0) {
+            const ordonnance = ordonnanceRows[0];
+            const { id_ordonnance } = ordonnance;
 
-                const role = roleResults[0];
-                let insertRoleQuery = "";
-                let insertParams = [];
+            const insertOrdonnanceSql = `INSERT INTO archive.Ordonnance SET ?`;
+            await queryPromise(connectionArchive, insertOrdonnanceSql, ordonnance);
+            console.log("✅ Transferred Ordonnance:", id_ordonnance);
 
-                if (table === "Medecin") {
-                  insertRoleQuery = `
-                    INSERT INTO archive.Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                  `;
-                  insertParams = [
-                    role.id,
-                    role.matricule,
-                    role.speciality,
-                    role.utilisateur_id,
-                    role.nom,
-                    role.prenom,
-                    role.num_tel,
-                  ];
-                } else if (table === "Patient") {
-                  insertRoleQuery = `
-                    INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  `;
-                  insertParams = [
-                    role.id,
-                    role.utilisateur_id,
-                    role.categorie,
-                    role.matricule,
-                    role.nom,
-                    role.prenom,
-                    role.num_tel,
-                    role.date_naissance,
-                    role.photo,
-                  ];
-                }
+            // 4️⃣ Transfer Medicaments linked to Ordonnance
+            const selectMedicamentsSql = `SELECT * FROM MedicamentsInOrdonnance WHERE ordonnance_id = ?`;
+            const medicamentRows = await queryPromise(connection, selectMedicamentsSql, [id_ordonnance]);
 
-                connectionArchive.query(
-                  insertRoleQuery,
-                  insertParams,
-                  async (insertRoleErr) => {
-                    if (insertRoleErr)
-                      return reject(
-                        `❌ Error archiving ${table}: ` + insertRoleErr
-                      );
-
-                    // ✅ Check if this Patient was a Directeur
-                    if (table === "Patient") {
-                      try {
-                        const directeurResult = await checkAndArchiveDirecteur(role.id);
-                        console.log(directeurResult);
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }
-
-                    const deleteRoleQuery = `DELETE FROM ${table} WHERE id = ?`;
-                    connection.query(
-                      deleteRoleQuery,
-                      [role.id],
-                      (deleteRoleErr) => {
-                        if (deleteRoleErr)
-                          return reject(
-                            `❌ Error deleting from ${table}: ` + deleteRoleErr
-                          );
-
-                        const deleteUserQuery =
-                          "DELETE FROM Utilisateur WHERE id = ?";
-                        connection.query(
-                          deleteUserQuery,
-                          [utilisateur.id],
-                          (deleteUserErr) => {
-                            if (deleteUserErr)
-                              return reject(
-                                "❌ Error deleting user: " + deleteUserErr
-                              );
-
-                            resolve({
-                              message: `✅ User and ${table} successfully archived.`,
-                              utilisateurId: utilisateur.id,
-                            });
-                          }
-                        );
-                      }
-                    );
-                  }
-                );
+            if (medicamentRows.length > 0) {
+              for (const medicament of medicamentRows) {
+                const insertMedicamentSql = `INSERT INTO archive.MedicamentsInOrdonnance SET ?`;
+                await queryPromise(connectionArchive, insertMedicamentSql, medicament);
               }
-            );
-          };
+              console.log(`✅ Transferred ${medicamentRows.length} medicaments for ordonnance: ${id_ordonnance}`);
+            }
+          }
 
-          checkTable(0);
+          // 5️⃣ After everything, Delete the Consultation (and cascade deletes examens/ordonnances if ON DELETE CASCADE exists)
+          await deleteConsultation(id_consultation);
+          console.log("✅ Deleted Consultation:", id_consultation);
         }
-      );
+
+        console.log("✅ All consultations transferred for user:", userId);
+        resolve("✅ Consultations transferred successfully.");
+
+      } catch (error) {
+        console.error("❌ Error during transfer:", error);
+        return reject(error);
+      }
     });
   });
 };
+
+exports.transferUtilisateur = async (email) => {
+  try {
+    console.log("➡️ Start transferring user");
+
+    // Step 1: Find the user by email
+    const utilisateur = await Patient.findUserByEmail(email);
+    if (!utilisateur) throw new Error("❌ User not found");
+
+    // Step 2: Archive Dossier_Medical
+    await handleDossierTransfer(utilisateur.id);
+
+  
+
+    // Step 4: Archive Utilisateur
+    await queryPromise(connectionArchive, `
+      INSERT INTO archive.Utilisateur (id, email, password, verified)
+      VALUES (?, ?, ?, ?)
+    `, [
+      utilisateur.id,
+      utilisateur.email,
+      utilisateur.password,
+      utilisateur.verified,
+    ]);
+
+    console.log("✅ User inserted into archive.Utilisateur");
+
+    // Step 5: Archive Role (Patient or Medecin)
+    const tables = ["Patient", "Medecin"];
+
+    let roleArchived = false;
+    for (const table of tables) {
+      const roleResults = await queryPromise(connection, `SELECT * FROM ${table} WHERE utilisateur_id = ?`, [utilisateur.id]);
+      if (roleResults.length > 0) {
+        const role = roleResults[0];
+
+        let insertRoleQuery = "";
+        let insertParams = [];
+
+        if (table === "Medecin") {
+          insertRoleQuery = `
+            INSERT INTO archive.Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `;
+          insertParams = [
+            role.id,
+            role.matricule,
+            role.speciality,
+            role.utilisateur_id,
+            role.nom,
+            role.prenom,
+            role.num_tel,
+          ];
+        } else if (table === "Patient") {
+          insertRoleQuery = `
+            INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+          insertParams = [
+            role.id,
+            role.utilisateur_id,
+            role.categorie,
+            role.matricule,
+            role.nom,
+            role.prenom,
+            role.num_tel,
+            role.date_naissance,
+            role.photo,
+          ];
+        }
+
+        await queryPromise(connectionArchive, insertRoleQuery, insertParams);
+
+        console.log(`✅ ${table} archived.`);
+
+        if (table === "Patient") {
+          try {
+            const directeurResult = await checkAndArchiveDirecteur(role.id);
+            const patient = await Patient.findPatientByUtilisateurId(utilisateur.id);
+            await transferConsultationsAndAssociatedData(patient.id);
+            console.log(directeurResult);
+          } catch (err) {
+            console.error("⚠️ Error archiving Directeur:", err);
+          }
+        }
+        await queryPromise(connection, `DELETE FROM ${table} WHERE id = ?`, [role.id]);
+        roleArchived = true;
+        break; // Exit loop after first matching role
+      }
+    }
+
+    if (!roleArchived) {
+      throw new Error("❌ User role not found.");
+    }
+
+    await queryPromise(connection, `DELETE FROM Utilisateur WHERE id = ?`, [utilisateur.id]);
+
+    console.log("✅ User and role successfully deleted from main database.");
+
+    return {
+      message: `✅ User and role successfully archived.`,
+      utilisateurId: utilisateur.id,
+    };
+
+  } catch (error) {
+    console.error("❌ Error in transferUtilisateur:", error);
+    throw error;
+  }
+};
+function queryPromise(conn, sql, params) {
+  return new Promise((resolve, reject) => {
+    conn.query(sql, params, (err, results) => {
+      if (err) {
+        console.error("❌ Query error:", err);
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
 
 const checkAndRestoreDirecteur = (patientId) => {
   return new Promise((resolve, reject) => {
@@ -511,8 +569,6 @@ exports.restoreUtilisateur = async (email) => {
     });
   });
 };
-
-
 exports.getArchivedUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
     const query = `
@@ -546,38 +602,3 @@ exports.getArchivedUtilisateurs = async () => {
   });
 };
 
-/*
-exports.findArchivedUser = async (email) => {
-    return new Promise((resolve, reject) => {
-      console.log("🔍 Searching for archived user");
-  
-      const userQuery = "SELECT * FROM archive.Utilisateur WHERE email = ?";
-      connectionArchive.query(userQuery, [email], (err, userResults) => {
-        if (err) return reject("❌ Error fetching archived user: " + err);
-        if (userResults.length === 0) return reject("❌ Archived user not found");
-  
-        const utilisateur = userResults[0];
-  
-        // Find the role of the user in the archive tables
-        const tables = ["Patient", "Medecin", "Directeur"];
-        const checkTable = (index) => {
-          if (index >= tables.length) return reject("❌ User role not found in archive");
-  
-          const table = tables[index];
-          const roleQuery = `SELECT * FROM archive.${table} WHERE utilisateur_id = ?`;
-          connectionArchive.query(roleQuery, [utilisateur.id], (roleErr, roleResults) => {
-            if (roleErr) return reject(`❌ Error querying archive.${table}: ` + roleErr);
-            if (roleResults.length === 0) return checkTable(index + 1);
-  
-            const role = roleResults[0];
-            console.log(`✅ Found archived user with role ${table}:`, role);
-            resolve({ utilisateur, role });
-          });
-        };
-  
-        checkTable(0);
-      });
-    });
-  };
-  
-*/

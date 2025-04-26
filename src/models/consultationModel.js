@@ -1,30 +1,37 @@
 const connection = require("../db");
 
+
 exports.createExamenMedical = async (data) => {
   return new Promise((resolve, reject) => {
-    const sql = `
-        INSERT INTO Examen_Medical (
+    const checkConsultationSql = `
+      SELECT 1 FROM Consultation WHERE id_consultation = ?
+    `;
+    const checkExamenSql = `
+      SELECT 1 FROM Examen_Medical WHERE consultation_id = ?
+    `;
+    const insertSql = `
+      INSERT INTO Examen_Medical (
         consultation_id, poids, taille, IMC, tension, vision_d, vision_g,
-          larmoiement, douleurs, taches_yeux, audition_d, audition_g, sifflements,
-          angines, epistaxis, rhinorrhee, cephalies, vertiges, troubles_sommeil,
-          peau_normal, peau_anormale, douleurs_musculaires, douleurs_articulaires,
-          douleurs_neurologiques, toux, dyspnee, douleurs_thoraciques, palpitations,
-          oedemes, cyanose, pyrosis, vomissements, douleurs_abdominales, dysurie,
-          hematurie, cycles_irreguliers, fonction_respiratoire, fonction_circulatoire,
-          fonction_motrice, sanguins, urinaires, radiologiques, hepatites_pos,
-          hepatites_neg, syphilis_pos, syphilis_neg, vih_pos, vih_neg
-        ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?
-        )
-      `;
+        larmoiement, douleurs, taches_yeux, audition_d, audition_g, sifflements,
+        angines, epistaxis, rhinorrhee, cephalies, vertiges, troubles_sommeil,
+        peau_normal, peau_anormale, douleurs_musculaires, douleurs_articulaires,
+        douleurs_neurologiques, toux, dyspnee, douleurs_thoraciques, palpitations,
+        oedemes, cyanose, pyrosis, vomissements, douleurs_abdominales, dysurie,
+        hematurie, cycles_irreguliers, fonction_respiratoire, fonction_circulatoire,
+        fonction_motrice, sanguins, urinaires, radiologiques, hepatites_pos,
+        hepatites_neg, syphilis_pos, syphilis_neg, vih_pos, vih_neg
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?
+      )
+    `;
 
     const values = [
       data.consultation_id,
@@ -77,15 +84,39 @@ exports.createExamenMedical = async (data) => {
       data.vih_neg,
     ];
 
-    connection.query(sql, values, (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ message: "Examen Medical created", id: result.insertId });
+    // Step 1: Check if consultation exists
+    connection.query(checkConsultationSql, [data.consultation_id], (err1, consultationRows) => {
+      if (err1) {
+        return reject("❌ Error checking consultation: " + err1);
       }
+      if (consultationRows.length === 0) {
+        return reject("⚠️ Consultation not found. Cannot create examen médical.");
+      }
+
+      // Step 2: Check if examen médical already exists
+      connection.query(checkExamenSql, [data.consultation_id], (err2, examenRows) => {
+        if (err2) {
+          return reject("❌ Error checking existing examen médical: " + err2);
+        }
+        if (examenRows.length > 0) {
+          return reject({
+            code: "EXISTING_EXAM",
+            message: "This consultation already has an examen médical.",
+          });
+        }
+
+        // Step 3: Insert new Examen_Medical
+        connection.query(insertSql, values, (err3, result) => {
+          if (err3) {
+            return reject("❌ Error inserting examen médical: " + err3);
+          }
+          resolve({ message: "✅ Examen médical created successfully", id: result.insertId });
+        });
+      });
     });
   });
 };
+
 
 exports.createConsultation = async (data) => {
   return new Promise((resolve, reject) => {
@@ -167,21 +198,36 @@ exports.ModifyConsultation = async (data) => {
 };
 exports.createOrdonnance = async (data) => {
   return new Promise((resolve, reject) => {
-    const sql = `
+    const checkSql = `
+      SELECT 1 FROM Ordonnance WHERE consultation_id = ?
+    `;
+    const insertSql = `
       INSERT INTO Ordonnance (date, consultation_id)
       VALUES (?, ?)
     `;
 
-    const values = [data.date, data.consultation_id];
+    const { date, consultation_id } = data;
 
-    connection.query(sql, values, (err, result) => {
+    // Step 1: Check if an ordonnance already exists for this consultation
+    connection.query(checkSql, [consultation_id], (err, existingOrdonnances) => {
       if (err) {
-        return reject("❌ Error creating ordonnance: " + err);
+        return reject("❌ Error checking existing ordonnance: " + err);
       }
 
-      resolve({
-        message: "✅ Ordonnance created successfully",
-        id_ordonnance: result.insertId,
+      if (existingOrdonnances.length > 0) {
+        return reject("⚠️ Ordonnance already exists for this consultation.");
+      }
+
+      // Step 2: If not found, insert the new ordonnance
+      connection.query(insertSql, [date, consultation_id], (insertErr, result) => {
+        if (insertErr) {
+          return reject("❌ Error creating ordonnance: " + insertErr);
+        }
+
+        resolve({
+          message: "✅ Ordonnance created successfully",
+          id_ordonnance: result.insertId,
+        });
       });
     });
   });
@@ -200,7 +246,7 @@ exports.addMedicaments = async (data) => {
     `;
 
     // Step 1: Check if ordonnance exists
-    connection.query(checkOrdonnanceSql, [data.id_ordenance], (err1, ordRows) => {
+    connection.query(checkOrdonnanceSql, [data.id_ordonnance], (err1, ordRows) => {
       if (err1) return reject("❌ Error checking ordonnance: " + err1);
       if (ordRows.length === 0) return reject("❌ Ordonnance not found.");
 
@@ -210,17 +256,16 @@ exports.addMedicaments = async (data) => {
         if (medRows.length === 0) return reject("❌ Medicament not found.");
 
         // Step 3: Check for duplicate
-        connection.query(checkDuplicateSql, [data.id_ordenance, data.medicament_id], (err3, dupRows) => {
+        connection.query(checkDuplicateSql, [data.id_ordonnance, data.medicament_id], (err3, dupRows) => {
           if (err3) return reject("❌ Error checking duplicate entry: " + err3);
           if (dupRows.length > 0) return reject("⚠️ Medicament already exists in this ordonnance.");
 
-          // Step 4: Insert new record
-          connection.query(insertSql, [data.id_ordenance, data.medicament_id, data.duree], (err4, result) => {
+          connection.query(insertSql, [data.id_ordonnance, data.medicament_id, data.duree], (err4, result) => {
             if (err4) return reject("❌ Error adding medicament to ordonnance: " + err4);
 
             resolve({
               message: "✅ Medicament added to ordonnance successfully",
-              ordonnance_id: data.id_ordenance,
+              ordonnance_id: data.id_ordonnance,
               medicament_id: data.medicament_id,
             });
           });
@@ -246,11 +291,8 @@ exports.getConsultationsByPatientId = async (patient_id) => {
     });
   });
 };
-// --- model/Ordonnance.js ---
 
 /**
- * Fetch all medicaments (with their details and prescribed duration)
- * for a specific ordonnance.
  *
  * @param {number} ordonnanceId
  * @returns {Promise<Array<{ medicament_id: number, duree: string, ID: number, NOM_DE_MARQUE: string, FORM: string, ... }>>}
@@ -280,74 +322,191 @@ exports.getMedicamentsByOrdonnance = (ordonnanceId) => {
 };
 
 
-// models/ordonnance.js
+exports.deleteMedicamentsByOrdonnance = async (ordonnance_id) => {
+  console.log("🗑️ Attempting to delete medicaments for ordonnance_id:", ordonnance_id);
 
-// models/ordonnance.js
-
-exports.deleteMedicamentsByOrdonnance = (ordonnanceId) => {
   return new Promise((resolve, reject) => {
-    console.log("📝 Deleting medicaments associated with ordonnance_id:", ordonnanceId);
-
-    const sql = `
+    const checkMedicamentsSql = `
+      SELECT 1 FROM MedicamentsInOrdonnance
+      WHERE ordonnance_id = ?
+    `;
+    const deleteMedicamentsSql = `
       DELETE FROM MedicamentsInOrdonnance
       WHERE ordonnance_id = ?
     `;
 
-    const values = [ordonnanceId];  // Ensure you're passing a single value
-
-    console.log("▶️ SQL: ", sql);
-    console.log("▶️ Values: ", values);
-
-    connection.query(sql, values, (err, result) => {
-      if (err) {
-        console.error("❌ Error deleting medicaments:", err);
-        return reject("❌ Error deleting medicaments: " + err.message);
+    // Step 1: Check if there are medicaments for this ordonnance
+    connection.query(checkMedicamentsSql, [ordonnance_id], (err1, results) => {
+      if (err1) {
+        console.error("❌ Error checking medicaments:", err1);
+        return reject("❌ Error checking medicaments: " + err1);
       }
 
-      console.log(`🗑  Deleted ${result.affectedRows} medicament(s)`);
-      resolve(result);
+      if (results.length === 0) {
+        console.log("ℹ️ No medicaments found for this ordonnance.");
+        return resolve({ message: "ℹ️ No medicaments to delete for this ordonnance." });
+      }
+
+      // Step 2: Delete medicaments
+      connection.query(deleteMedicamentsSql, [ordonnance_id], (err2, deleteResult) => {
+        if (err2) {
+          console.error("❌ Error deleting medicaments:", err2);
+          return reject("❌ Error deleting medicaments: " + err2);
+        }
+
+        console.log(`✅ Deleted ${deleteResult.affectedRows} medicament(s) from ordonnance_id: ${ordonnance_id}`);
+        resolve({
+          message: `✅ ${deleteResult.affectedRows} medicament(s) deleted successfully.`,
+        });
+      });
     });
   });
 };
 
-exports.deleteOrdonnance = (ordonnanceId) => {
+
+exports.deleteOrdonnance = async (ordonnance_id) => {
+  console.log("🗑️ Starting deletion of ordonnance_id:", ordonnance_id);
+
   return new Promise((resolve, reject) => {
     connection.beginTransaction((err) => {
-      if (err) return reject("❌ Transaction error: " + err);
+      if (err) {
+        console.error("❌ Transaction error:", err);
+        return reject("❌ Transaction error: " + err);
+      }
 
-      // First, delete medicaments linked to this ordonnance
-      exports.deleteMedicamentsByOrdonnance(ordonnanceId)
+      // Step 1: Delete medicaments first
+      exports.deleteMedicamentsByOrdonnance(ordonnance_id)
         .then(() => {
-          const deleteOrdSql = `
+          const checkOrdonnanceSql = `
+            SELECT 1 FROM Ordonnance
+            WHERE id_ordonnance = ?
+          `;
+          const deleteOrdonnanceSql = `
             DELETE FROM Ordonnance
             WHERE id_ordonnance = ?
           `;
-          const values = [ordonnanceId];
-          
-          console.log("▶️ SQL for Ordonnance delete: ", deleteOrdSql);
-          console.log("▶️ Values for Ordonnance delete: ", values);
 
-          connection.query(deleteOrdSql, values, (err2, result2) => {
+          // Step 2: Check if ordonnance exists
+          connection.query(checkOrdonnanceSql, [ordonnance_id], (err2, ordonnanceRows) => {
             if (err2) {
-              return connection.rollback(() => reject("❌ Error deleting ordonnance: " + err2));
+              console.error("❌ Error checking ordonnance:", err2);
+              return connection.rollback(() => reject("❌ Error checking ordonnance: " + err2));
             }
-            console.log(`🗑  Deleted ${result2.affectedRows} ordonnance(s)`);
 
-            // Commit after both deletions
-            connection.commit((err3) => {
+            if (ordonnanceRows.length === 0) {
+              console.log("ℹ️ Ordonnance already deleted or does not exist.");
+              return connection.rollback(() => reject("ℹ️ Ordonnance already deleted or does not exist."));
+            }
+
+            // Step 3: Delete ordonnance
+            connection.query(deleteOrdonnanceSql, [ordonnance_id], (err3, deleteResult) => {
               if (err3) {
-                return connection.rollback(() => reject("❌ Commit error: " + err3));
+                console.error("❌ Error deleting ordonnance:", err3);
+                return connection.rollback(() => reject("❌ Error deleting ordonnance: " + err3));
               }
-              resolve({ message: "✅ Ordonnance and related medicaments deleted successfully" });
+
+              console.log(`✅ Deleted ordonnance with id: ${ordonnance_id}`);
+
+              // Step 4: Commit
+              connection.commit((commitErr) => {
+                if (commitErr) {
+                  console.error("❌ Commit error:", commitErr);
+                  return connection.rollback(() => reject("❌ Commit error: " + commitErr));
+                }
+                resolve({ message: "✅ Ordonnance and related medicaments deleted successfully" });
+              });
             });
           });
         })
         .catch((err) => {
+          console.error("❌ Error during deletion process:", err);
           connection.rollback(() => reject(err));
         });
     });
   });
 };
+exports.deleteConsultation = async (consultation_id) => {
+  console.log("🗑️ Starting full deletion of consultation_id:", consultation_id);
 
+  return new Promise((resolve, reject) => {
+    connection.beginTransaction(async (err) => {
+      if (err) {
+        console.error("❌ Transaction error:", err);
+        return reject("❌ Transaction error: " + err);
+      }
 
+      try {
+        // Step 1: Delete Examen_Medical if exists
+        const deleteExamenMedicalSql = `
+          DELETE FROM Examen_Medical
+          WHERE consultation_id = ?
+        `;
+
+        connection.query(deleteExamenMedicalSql, [consultation_id], (deleteExamErr, deleteExamResult) => {
+          if (deleteExamErr) {
+            console.error("❌ Error deleting examen medical:", deleteExamErr);
+            return connection.rollback(() => reject("❌ Error deleting examen medical: " + deleteExamErr));
+          }
+
+          console.log(`🧹 Deleted ${deleteExamResult.affectedRows} Examen_Medical record(s)`);
+
+          // Step 2: Check if an Ordonnance exists for this Consultation
+          const checkOrdonnanceSql = `
+            SELECT id_ordonnance 
+            FROM Ordonnance 
+            WHERE consultation_id = ?
+          `;
+
+          connection.query(checkOrdonnanceSql, [consultation_id], async (checkErr, ordonnanceRows) => {
+            if (checkErr) {
+              console.error("❌ Error checking ordonnance:", checkErr);
+              return connection.rollback(() => reject("❌ Error checking ordonnance: " + checkErr));
+            }
+
+            if (ordonnanceRows.length > 0) {
+              const ordonnanceId = ordonnanceRows[0].id_ordonnance;
+              console.log("📄 Found ordonnance for consultation. Deleting ordonnance_id:", ordonnanceId);
+
+              // Step 3: Delete the ordonnance (and its medicaments)
+              try {
+                await exports.deleteOrdonnance(ordonnanceId);
+              } catch (deleteOrdonnanceErr) {
+                console.error("❌ Error deleting ordonnance:", deleteOrdonnanceErr);
+                return connection.rollback(() => reject(deleteOrdonnanceErr));
+              }
+            } else {
+              console.log("ℹ️ No ordonnance linked to this consultation.");
+            }
+
+            // Step 4: Delete the Consultation
+            const deleteConsultationSql = `
+              DELETE FROM Consultation
+              WHERE id_consultation = ?
+            `;
+            connection.query(deleteConsultationSql, [consultation_id], (deleteConsultErr, deleteConsultResult) => {
+              if (deleteConsultErr) {
+                console.error("❌ Error deleting consultation:", deleteConsultErr);
+                return connection.rollback(() => reject("❌ Error deleting consultation: " + deleteConsultErr));
+              }
+
+              console.log(`✅ Deleted consultation with id: ${consultation_id}`);
+
+              // Step 5: Commit the transaction
+              connection.commit((commitErr) => {
+                if (commitErr) {
+                  console.error("❌ Commit error:", commitErr);
+                  return connection.rollback(() => reject("❌ Commit error: " + commitErr));
+                }
+                resolve({ message: "✅ Consultation, Examen_Medical, and related ordonnance deleted successfully." });
+              });
+            });
+          });
+        });
+      } catch (error) {
+        console.error("❌ Unexpected error:", error);
+        connection.rollback(() => reject(error));
+      }
+    });
+  });
+};
 
