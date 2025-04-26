@@ -55,3 +55,50 @@ exports.activateAccount = asyncHandler(async (req, res, next) => {
     res.status(400).json({ error: "Invalid or expired token" });
   }
 });
+
+exports.checkVerificationStatus = asyncHandler(async (req, res) => {
+  const { email } = req.params;
+  console.log("Checking verification status for email:", email);
+
+  try {
+    const patient = await Patient.findUserByEmail(email);
+    console.log("Found patient:", JSON.stringify(patient, null, 2));
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found",
+      });
+    }
+
+    // More explicit verification check, handling different possible values
+    const isVerified =
+      patient.is_active === 1 ||
+      patient.is_active === true ||
+      patient.verified === 1 ||
+      patient.verified === true;
+
+    console.log("Raw is_active value:", patient.is_active);
+    console.log("Raw verified value:", patient.verified);
+    console.log("Calculated verification status:", isVerified);
+
+    return res.status(200).json({
+      success: true,
+      verified: isVerified,
+      userData: {
+        id: patient.id,
+        email: patient.email,
+        nom: patient.nom,
+        prenom: patient.prenom,
+        matricule: patient.matricule,
+        categorie: patient.categorie,
+      },
+    });
+  } catch (error) {
+    console.error("Error checking verification:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Error checking verification status",
+    });
+  }
+});
