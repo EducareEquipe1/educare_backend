@@ -2,17 +2,18 @@ const connection = require("../db");
 const db = connection.promise();
 
 const RendezVous = {
-  create: async (id_patient, id_demande, motif) => {
+  create: async (id_patient, id_demande, motif, email) => {
     console.log("→ Données pour insertion rendezVous :", {
       id_patient: typeof id_patient,
       id_demande: typeof id_demande,
       motif: typeof motif,
+      email: typeof email,
     });
-    console.log("→ Valeurs :", id_patient, id_demande, motif);
+    console.log("→ Valeurs :", id_patient, id_demande, motif, email);
 
     const [result] = await db.execute(
-      "INSERT INTO rendezVous (id_patient, id_demande, motif, statut) VALUES (?, ?, ?, 'demandé')",
-      [id_patient, id_demande, motif]
+      "INSERT INTO rendezVous (id_patient, id_demande, motif,email, statut) VALUES (?, ?, ?, ?, 'demandé')",
+      [id_patient, id_demande, motif, email]
     );
 
     return result.insertId;
