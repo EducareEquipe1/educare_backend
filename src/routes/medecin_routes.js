@@ -19,7 +19,10 @@ const { getUtilisateur } = require("../controllers/getUsersController");
 
 const { searchPatients, searchMedicaments } = require("../controllers/searchControllers");
 
+const {programmerRendezVous,getDemandesRendezVousByPatientEmail,getRendezVousByPatientEmail,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
+
 const {programmerRendezVous,programmerRendezVousParMedecin,refuserRendezVous, annulerRendezVous,terminerRendezVous,getConsultation,listeDemandesRendezVous ,listeRendezVous} =require("../controllers/rendezVousController")
+
 
 const {
   createExamenMedical,
@@ -173,5 +176,12 @@ router.put("/refuserdv/:id_rdv",
     // gte liste des demandes
 router.get('/listedesdemandes',
 listeDemandesRendezVous);
+//liste rendezvous dun seul patient
+router.get('/listerendezvousdupatient/:email',
+  getRendezVousByPatientEmail);
+
+  //liste des demandes rendezvous dun seul patient
+router.get('/listedemandesdupatient/:email',
+  getDemandesRendezVousByPatientEmail);
 
 module.exports = router; 
