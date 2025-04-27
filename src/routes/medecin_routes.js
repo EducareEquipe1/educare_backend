@@ -37,6 +37,7 @@ const {
   fetchMedicamentsForOrdonnance,
   deleteOrdonnanceController,
   deleteConsultationController,
+  getConsultationsbyIdController,
 } = require("../controllers/consultationController");
 const { deleteOrdonnance, deleteConsultation } = require("../models/consultationModel");
 
@@ -144,6 +145,12 @@ router.get(
   authMiddleware,
   doctorMiddleware,
   fetchMedicamentsForOrdonnance
+);
+router.get(
+  "/get-consultation/:id",
+  authMiddleware,
+  doctorMiddleware,
+  getConsultationsbyIdController
 );
 router.delete(
   "/delete-ordonnance/:id",
