@@ -359,3 +359,22 @@ exports.getMedicamentsByOrdonnance = (ordonnanceId) => {
     });
   });
 };
+exports.deleteConsultation = async (id_consultation) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      DELETE FROM Consultation
+      WHERE id_consultation = ?
+    `;
+
+    connection.query(sql, [id_consultation], (err, results) => {
+      if (err) return reject("❌ Error deleting consultation: " + err);
+
+      // Check if any rows were affected (i.e., if any consultation was deleted)
+      if (results.affectedRows > 0) {
+        resolve({ success: 'Consultation deleted successfully' });
+      } else {
+        resolve({ error: 'Consultation not found' });
+      }
+    });
+  });
+};
