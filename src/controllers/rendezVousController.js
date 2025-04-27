@@ -171,7 +171,7 @@ exports.demanderRendezVous = async (req, res) => {
   };
   
   //programmer un rendez vous depuis le bouton ajouter du calendrier
-  exports.programmerDirectementRendezVous = async (req, res) => {
+  /*exports.programmerDirectementRendezVous = async (req, res) => {
     const { email, date_rdv, heure_rdv, motif} = req.body;
   
     try {
@@ -223,8 +223,60 @@ exports.demanderRendezVous = async (req, res) => {
       console.error("Erreur lors de la programmation directe du rendez-vous:", error);
       res.status(500).json({ error: "Erreur serveur." });
     }
-  };
-  
+  };*/
+  // Programmer un rendez-vous depuis le bouton ajouter du calendrier
+exports.programmerDirectementRendezVous = async (req, res) => {
+  const { email, date_rdv, heure_rdv, motif, nom, prenom } = req.body; // ✅ récupérer nom et prénom directement
+
+  try {
+    // 1. Vérifier que l'utilisateur existe
+    const [userRows] = await db.execute(
+      "SELECT id FROM Utilisateur WHERE email = ?",
+      [email]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
+    }
+
+    const id_utilisateur = userRows[0].id;
+
+    // 2. Vérifier que c'est bien un patient
+    const [patientRows] = await db.execute(
+      "SELECT id FROM Patient WHERE utilisateur_id = ?",
+      [id_utilisateur]
+    );
+
+    if (patientRows.length === 0) {
+      return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
+    }
+
+    const id_patient = patientRows[0].id;
+
+    // 3. Créer directement le rendez-vous
+    const [result] = await db.execute(
+      "INSERT INTO rendezVous (id_patient, date, heure, motif, statut, email) VALUES (?, ?, ?, ?, 'programmé', ?)",
+      [id_patient, date_rdv, heure_rdv, motif, email]
+    );
+
+    const id_rdv = result.insertId;
+
+    res.status(201).json({
+      message: "Rendez-vous programmé avec succès par le médecin.",
+      id_rdv,
+      patient: {
+        nom,
+        prenom,
+        email
+      }
+    });
+
+  } catch (error) {
+    console.error("Erreur lors de la programmation directe du rendez-vous:", error);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+};
+
   exports.modifierRendezVous = async (req, res) => {
     const { id_rendezVous } = req.params;
     const { date_rdv, heure_rdv, motif } = req.body;
@@ -364,7 +416,9 @@ exports.listeRendezVous = async (req, res) => {
         p.prenom, 
         r.date, 
         r.heure, 
-        r.statut
+        r.statut,
+        r.motif,
+        r.id_rendezVous
       FROM 
         rendezVous r
       INNER JOIN 
