@@ -220,7 +220,7 @@ exports.modifyConsultation = async (req, res) => {
     });
     return res.status(201).json(Consultation);
   } catch (error) {
-    console.error("Error creating consultation:", error);
+    console.error("Error modifying consultation:", error);
     return res
       .status(500)
       .json({ message: "Server error while creating consultation" });
