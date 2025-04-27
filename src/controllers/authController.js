@@ -8,7 +8,7 @@ const BlacklistToken = require("../models/blacklistTokenModel");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 //✅all page
-//✅modification Directeur added 
+//✅modification Directeur added
 exports.register = asyncHandler(async (req, res, userType) => {
   const {
     first_name,
@@ -110,7 +110,6 @@ exports.register = asyncHandler(async (req, res, userType) => {
   });
 });
 
-
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const isValidEmail = (email) => {
@@ -147,7 +146,7 @@ exports.login = asyncHandler(async (req, res) => {
       id: patient.id,
       email: patient.email,
       verified: patient.verified,
-      role : role
+      role: role,
     },
   });
 });
@@ -172,7 +171,7 @@ exports.getPatientProfile = asyncHandler(async (req, res) => {
     first_name: patient.first_name,
     last_name: patient.last_name,
     email: patient.email,
-    categorie:patient.categorie
+    categorie: patient.categorie,
   });
 });
 
@@ -202,5 +201,33 @@ exports.logout = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Erreur lors de la déconnexion" });
+  }
+});
+
+exports.getPatientByEmail = asyncHandler(async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const patient = await Patient.getUserProfile(email);
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: patient.utilisateur_id,
+        email: patient.email,
+        firstName: patient.prenom,
+        lastName: patient.nom,
+        phone: patient.num_tel,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching patient data:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching patient data" });
   }
 });

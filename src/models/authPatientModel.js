@@ -357,7 +357,6 @@ exports.deleteUserByEmail = async (email) => {
   });
 };
 
-
 exports.saveUserProfile = async ({
   prenom,
   nom,
@@ -445,7 +444,6 @@ exports.saveUserProfile = async ({
 };
 exports.getUserProfile = async (email) => {
   return new Promise((resolve, reject) => {
-    // SQL query to get user and patient info by email
     const sql = `
       SELECT 
         u.id AS utilisateur_id,
@@ -463,10 +461,9 @@ exports.getUserProfile = async (email) => {
         console.error("Error fetching user profile:", err);
         reject(err);
       } else if (results.length === 0) {
-        console.log("No user found with this email.");
         resolve(null);
       } else {
-        resolve(results[0]); // Return the first result (should only be one)
+        resolve(results[0]);
       }
     });
   });

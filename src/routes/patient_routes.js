@@ -4,6 +4,7 @@ const {
   login,
   getActivePatients,
   logout,
+  getPatientByEmail, // Add this import
 } = require("../controllers/authController");
 const {
   sendEmailVerification,
@@ -47,6 +48,7 @@ router.post("/set-new-password", setNewPassword);
 // Profile management routes
 router.patch("/modify-profile/:email", modifyProfileInformations);
 router.get("/modify-profile/:email", getUserProfileController);
+router.get("/profile/:email", getPatientByEmail); // Add this line
 
 // Image upload route
 router.post("/upload-id-photo", uploadMiddleware, uploadImage);
