@@ -364,7 +364,8 @@ exports.listeRendezVous = async (req, res) => {
         p.prenom, 
         r.date, 
         r.heure, 
-        r.statut
+        r.statut,
+        r.motif
       FROM 
         rendezVous r
       INNER JOIN 
