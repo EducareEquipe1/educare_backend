@@ -14,8 +14,8 @@ const {
   getMedicamentsByOrdonnance,
   deleteOrdonnance,
   deleteConsultation,
+  getConsultationId,
 } = require("../models/consultationModel");
-
 exports.createExamenMedical = async (req, res) => {
   const { id } = req.params; // consultation_id
   const {
@@ -261,6 +261,27 @@ exports.getConsultationsbyEmailController = async (req, res) => {
     }
 
     return res.status(200).json(consultations);
+  } catch (error) {
+    console.error("❌ Error fetching consultations:", error);
+    return res.status(500).json({
+      message: "Server error while retrieving consultations.",
+      error,
+    });
+  }
+};
+exports.getConsultationsbyIdController = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const consultation = await getConsultationId(id);
+
+    if (!consultation || consultation.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No consultations found for this patient." });
+    }
+
+    return res.status(200).json(consultation);
   } catch (error) {
     console.error("❌ Error fetching consultations:", error);
     return res.status(500).json({

@@ -3,8 +3,8 @@ const connectionArchive = require("../archiveDb");
 const Patient = require("../models/authPatientModel");
 const { deleteConsultation } = require("./consultationModel.js");
 
-//✅all page  
-//✅modification Directeur added 
+//✅all page
+//✅modification Directeur added
 
 const checkAndArchiveDirecteur = (patientId) => {
   return new Promise((resolve, reject) => {
@@ -40,9 +40,8 @@ const checkAndArchiveDirecteur = (patientId) => {
     });
   });
 };
-const handleDossierTransfer = (ownerId)=> {
-  const dossierQuery =
-    "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?";
+const handleDossierTransfer = (ownerId) => {
+  const dossierQuery = "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?";
   connection.query(dossierQuery, [ownerId], (err, dossierResults) => {
     if (err) return reject("❌ Error fetching Dossier_Medical: " + err);
 
@@ -102,24 +101,15 @@ const handleDossierTransfer = (ownerId)=> {
       ],
       (insertErr) => {
         if (insertErr)
-          return reject(
-            "❌ Error archiving Dossier_Medical: " + insertErr
-          );
+          return reject("❌ Error archiving Dossier_Medical: " + insertErr);
 
-        const deleteDossierQuery =
-          "DELETE FROM Dossier_Medical WHERE id = ?";
-        connection.query(
-          deleteDossierQuery,
-          [dossier.id],
-          (deleteErr) => {
-            if (deleteErr)
-              return reject(
-                "❌ Error deleting Dossier_Medical: " + deleteErr
-              );
+        const deleteDossierQuery = "DELETE FROM Dossier_Medical WHERE id = ?";
+        connection.query(deleteDossierQuery, [dossier.id], (deleteErr) => {
+          if (deleteErr)
+            return reject("❌ Error deleting Dossier_Medical: " + deleteErr);
 
-            console.log("✅ Dossier_Medical archived and deleted.");
-          }
-        );
+          console.log("✅ Dossier_Medical archived and deleted.");
+        });
       }
     );
   });
@@ -132,73 +122,102 @@ const transferConsultationsAndAssociatedData = (userId) => {
       SELECT * FROM Consultation WHERE patient_id = ?
     `;
 
-    connection.query(selectConsultationsSql, [userId], async (err, consultations) => {
-      if (err) return reject("❌ Error fetching consultations: " + err);
-      if (consultations.length === 0) {
-        console.log("ℹ️ No consultations to transfer.");
-        return resolve("ℹ️ No consultations to transfer.");
-      }
-
-      try {
-        for (const consultation of consultations) {
-          const { id_consultation } = consultation;
-          console.log("➡️ Transferring consultation:", id_consultation);
-
-          // 1️⃣ Transfer Examen_Medical if exists
-          const selectExamenSql = `SELECT * FROM Examen_Medical WHERE consultation_id = ?`;
-         
-
-          // 2️⃣ Transfer Consultation itself FIRST
-          const insertConsultationSql = `INSERT INTO archive.Consultation SET ?`;
-          await queryPromise(connectionArchive, insertConsultationSql, consultation);
-          console.log("✅ Transferred Consultation:", id_consultation);
-          
-          const examenRows = await queryPromise(connection, selectExamenSql, [id_consultation]);
-
-          if (examenRows.length > 0) {
-            const examen = examenRows[0];
-            const insertExamenSql = `INSERT INTO archive.Examen_Medical SET ?`;
-            await queryPromise(connectionArchive, insertExamenSql, examen);
-            console.log("✅ Transferred Examen_Medical for consultation:", id_consultation);
-          }
-          // 3️⃣ Now Transfer Ordonnance (linked to Consultation)
-          const selectOrdonnanceSql = `SELECT * FROM Ordonnance WHERE consultation_id = ?`;
-          const ordonnanceRows = await queryPromise(connection, selectOrdonnanceSql, [id_consultation]);
-
-          if (ordonnanceRows.length > 0) {
-            const ordonnance = ordonnanceRows[0];
-            const { id_ordonnance } = ordonnance;
-
-            const insertOrdonnanceSql = `INSERT INTO archive.Ordonnance SET ?`;
-            await queryPromise(connectionArchive, insertOrdonnanceSql, ordonnance);
-            console.log("✅ Transferred Ordonnance:", id_ordonnance);
-
-            // 4️⃣ Transfer Medicaments linked to Ordonnance
-            const selectMedicamentsSql = `SELECT * FROM MedicamentsInOrdonnance WHERE ordonnance_id = ?`;
-            const medicamentRows = await queryPromise(connection, selectMedicamentsSql, [id_ordonnance]);
-
-            if (medicamentRows.length > 0) {
-              for (const medicament of medicamentRows) {
-                const insertMedicamentSql = `INSERT INTO archive.MedicamentsInOrdonnance SET ?`;
-                await queryPromise(connectionArchive, insertMedicamentSql, medicament);
-              }
-              console.log(`✅ Transferred ${medicamentRows.length} medicaments for ordonnance: ${id_ordonnance}`);
-            }
-          }
-
-          // 5️⃣ After everything, Delete the Consultation (and cascade deletes examens/ordonnances if ON DELETE CASCADE exists)
-          await deleteConsultation(id_consultation);
-          console.log("✅ Deleted Consultation:", id_consultation);
+    connection.query(
+      selectConsultationsSql,
+      [userId],
+      async (err, consultations) => {
+        if (err) return reject("❌ Error fetching consultations: " + err);
+        if (consultations.length === 0) {
+          console.log("ℹ️ No consultations to transfer.");
+          return resolve("ℹ️ No consultations to transfer.");
         }
 
-        console.log("✅ All consultations transferred for user:", userId);
-        resolve("✅ Consultations transferred successfully.");
+        try {
+          for (const consultation of consultations) {
+            const { id_consultation } = consultation;
+            console.log("➡️ Transferring consultation:", id_consultation);
 
-      } catch (error) {
-        console.error("❌ Error during transfer:", error);
-        return reject(error);
+            // 1️⃣ Transfer Examen_Medical if exists
+            const selectExamenSql = `SELECT * FROM Examen_Medical WHERE consultation_id = ?`;
+
+            // 2️⃣ Transfer Consultation itself FIRST
+            const insertConsultationSql = `INSERT INTO archive.Consultation SET ?`;
+            await queryPromise(
+              connectionArchive,
+              insertConsultationSql,
+              consultation
+            );
+            console.log("✅ Transferred Consultation:", id_consultation);
+
+            const examenRows = await queryPromise(connection, selectExamenSql, [
+              id_consultation,
+            ]);
+
+            if (examenRows.length > 0) {
+              const examen = examenRows[0];
+              const insertExamenSql = `INSERT INTO archive.Examen_Medical SET ?`;
+              await queryPromise(connectionArchive, insertExamenSql, examen);
+              console.log(
+                "✅ Transferred Examen_Medical for consultation:",
+                id_consultation
+              );
+            }
+            // 3️⃣ Now Transfer Ordonnance (linked to Consultation)
+            const selectOrdonnanceSql = `SELECT * FROM Ordonnance WHERE consultation_id = ?`;
+            const ordonnanceRows = await queryPromise(
+              connection,
+              selectOrdonnanceSql,
+              [id_consultation]
+            );
+            console.log("ordonnaceRows", ordonnanceRows);
+            if (ordonnanceRows.length > 0) {
+              const ordonnance = ordonnanceRows[0];
+              const { id_ordonnance } = ordonnance;
+
+              const insertOrdonnanceSql = `INSERT INTO archive.Ordonnance SET ?`;
+              await queryPromise(
+                connectionArchive,
+                insertOrdonnanceSql,
+                ordonnance
+              );
+              console.log("✅ Transferred Ordonnance:", id_ordonnance);
+
+              // 4️⃣ Transfer Medicaments linked to Ordonnance
+              const selectMedicamentsSql = `SELECT * FROM MedicamentsInOrdonnance WHERE ordonnance_id = ?`;
+              const medicamentRows = await queryPromise(
+                connection,
+                selectMedicamentsSql,
+                [id_ordonnance]
+              );
+
+              if (medicamentRows.length > 0) {
+                for (const medicament of medicamentRows) {
+                  const insertMedicamentSql = `INSERT INTO archive.MedicamentsInOrdonnance SET ?`;
+                  await queryPromise(
+                    connectionArchive,
+                    insertMedicamentSql,
+                    medicament
+                  );
+                }
+                console.log(
+                  `✅ Transferred ${medicamentRows.length} medicaments for ordonnance: ${id_ordonnance}`
+                );
+              }
+            }
+
+            // 5️⃣ After everything, Delete the Consultation (and cascade deletes examens/ordonnances if ON DELETE CASCADE exists)
+            await deleteConsultation(id_consultation);
+            console.log("✅ Deleted Consultation:", id_consultation);
+          }
+
+          console.log("✅ All consultations transferred for user:", userId);
+          resolve("✅ Consultations transferred successfully.");
+        } catch (error) {
+          console.error("❌ Error during transfer:", error);
+          return reject(error);
+        }
       }
-    });
+    );
   });
 };
 
@@ -213,18 +232,20 @@ exports.transferUtilisateur = async (email) => {
     // Step 2: Archive Dossier_Medical
     await handleDossierTransfer(utilisateur.id);
 
-  
-
     // Step 4: Archive Utilisateur
-    await queryPromise(connectionArchive, `
+    await queryPromise(
+      connectionArchive,
+      `
       INSERT INTO archive.Utilisateur (id, email, password, verified)
       VALUES (?, ?, ?, ?)
-    `, [
-      utilisateur.id,
-      utilisateur.email,
-      utilisateur.password,
-      utilisateur.verified,
-    ]);
+    `,
+      [
+        utilisateur.id,
+        utilisateur.email,
+        utilisateur.password,
+        utilisateur.verified,
+      ]
+    );
 
     console.log("✅ User inserted into archive.Utilisateur");
 
@@ -233,7 +254,11 @@ exports.transferUtilisateur = async (email) => {
 
     let roleArchived = false;
     for (const table of tables) {
-      const roleResults = await queryPromise(connection, `SELECT * FROM ${table} WHERE utilisateur_id = ?`, [utilisateur.id]);
+      const roleResults = await queryPromise(
+        connection,
+        `SELECT * FROM ${table} WHERE utilisateur_id = ?`,
+        [utilisateur.id]
+      );
       if (roleResults.length > 0) {
         const role = roleResults[0];
 
@@ -279,14 +304,18 @@ exports.transferUtilisateur = async (email) => {
         if (table === "Patient") {
           try {
             const directeurResult = await checkAndArchiveDirecteur(role.id);
-            const patient = await Patient.findPatientByUtilisateurId(utilisateur.id);
+            const patient = await Patient.findPatientByUtilisateurId(
+              utilisateur.id
+            );
             await transferConsultationsAndAssociatedData(patient.id);
             console.log(directeurResult);
           } catch (err) {
             console.error("⚠️ Error archiving Directeur:", err);
           }
         }
-        await queryPromise(connection, `DELETE FROM ${table} WHERE id = ?`, [role.id]);
+        await queryPromise(connection, `DELETE FROM ${table} WHERE id = ?`, [
+          role.id,
+        ]);
         roleArchived = true;
         break; // Exit loop after first matching role
       }
@@ -296,7 +325,9 @@ exports.transferUtilisateur = async (email) => {
       throw new Error("❌ User role not found.");
     }
 
-    await queryPromise(connection, `DELETE FROM Utilisateur WHERE id = ?`, [utilisateur.id]);
+    await queryPromise(connection, `DELETE FROM Utilisateur WHERE id = ?`, [
+      utilisateur.id,
+    ]);
 
     console.log("✅ User and role successfully deleted from main database.");
 
@@ -304,7 +335,6 @@ exports.transferUtilisateur = async (email) => {
       message: `✅ User and role successfully archived.`,
       utilisateurId: utilisateur.id,
     };
-
   } catch (error) {
     console.error("❌ Error in transferUtilisateur:", error);
     throw error;
@@ -350,7 +380,9 @@ const checkAndRestoreDirecteur = (patientId) => {
           [directeur.id],
           (deleteErr) => {
             if (deleteErr)
-              return reject("❌ Error deleting archived Directeur: " + deleteErr);
+              return reject(
+                "❌ Error deleting archived Directeur: " + deleteErr
+              );
             resolve("✅ Directeur restored and archive deleted.");
           }
         );
@@ -358,216 +390,298 @@ const checkAndRestoreDirecteur = (patientId) => {
     });
   });
 };
-const handleRestoreDossierMedical = (utilisateurId) => {
-  return new Promise((resolve, reject) => {
-    const query = `SELECT * FROM archive.Dossier_Medical WHERE utilisateur_id = ?`;
+const restoreConsultationsAndAssociatedData = async (patientId) => {
+  console.log("➡️ Restoring consultations for patient:", patientId);
 
-    connectionArchive.query(query, [utilisateurId], (err, results) => {
-      if (err) return reject("❌ Error fetching archived dossier: " + err);
+  const consultations = await queryPromise(
+    connectionArchive,
+    `SELECT * FROM archive.Consultation WHERE patient_id = ?`,
+    [patientId]
+  );
 
-      if (results.length === 0) {
-        console.log(`ℹ️ No Dossier_Medical found for user ID ${utilisateurId}`);
-        return resolve("No dossier to restore.");
-      }
+  if (consultations.length === 0) {
+    console.log("ℹ️ No archived consultations to restore.");
+    return;
+  }
 
-      const dossier = results[0];
+  for (const consultation of consultations) {
+    const { id_consultation } = consultation;
 
-      const insertQuery = `
-        INSERT INTO Dossier_Medical 
-        (id, date_creation, groupeSanguin, numSecuriteSociale, adresse, situation_famille, 
-         taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
-         tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, 
-         medicaments, affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, 
-         reactionsAllergiques, notes, statut, date_naissance, nom, prenom, num_tel, utilisateur_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+    // Insert Consultation
+    await queryPromise(
+      connection,
+      `INSERT INTO Consultation SET ?`,
+      consultation
+    );
 
-      connection.query(
-        insertQuery,
-        [
-          dossier.id,
-          dossier.date_creation,
-          dossier.groupeSanguin,
-          dossier.numSecuriteSociale,
-          dossier.adresse,
-          dossier.situation_famille,
-          dossier.taille,
-          dossier.poids,
-          dossier.tabac_fume,
-          dossier.tabac_fume_nombre,
-          dossier.tabac_chique,
-          dossier.tabac_chique_nombre,
-          dossier.tabac_pris,
-          dossier.tabac_pris_nombre,
-          dossier.age_pris,
-          dossier.ancien_fume,
-          dossier.periode_exposition,
-          dossier.alcool,
-          dossier.medicaments,
-          dossier.affectionsCongenitales,
-          dossier.maladiesGenerales,
-          dossier.interventionsChirurgicales,
-          dossier.reactionsAllergiques,
-          dossier.notes,
-          dossier.statut,
-          dossier.date_naissance,
-          dossier.nom,
-          dossier.prenom,
-          dossier.num_tel,
-          utilisateurId,
-        ],
-        (insertErr) => {
-          if (insertErr)
-            return reject("❌ Error restoring Dossier_Medical: " + insertErr);
+    console.log("✅ Restored Consultation:", id_consultation);
 
-          connectionArchive.query(
-            "DELETE FROM archive.Dossier_Medical WHERE id = ?",
-            [dossier.id],
-            (deleteErr) => {
-              if (deleteErr)
-                return reject("❌ Error deleting archived dossier: " + deleteErr);
+    // Restore Examen_Medical
+    const examens = await queryPromise(
+      connectionArchive,
+      `SELECT * FROM archive.Examen_Medical WHERE consultation_id = ?`,
+      [id_consultation]
+    );
 
-              console.log("✅ Dossier_Medical restored and archive deleted.");
-              resolve("✅ Dossier_Medical successfully restored.");
-            }
-          );
-        }
+    for (const examen of examens) {
+      await queryPromise(
+        connection,
+        `INSERT INTO Examen_Medical SET ?`,
+        examen
       );
-    });
-  });
+      console.log(
+        "✅ Restored Examen_Medical for consultation:",
+        id_consultation
+      );
+    }
+
+    // Restore Ordonnance
+    const ordonnances = await queryPromise(
+      connectionArchive,
+      `SELECT * FROM archive.Ordonnance WHERE consultation_id = ?`,
+      [id_consultation]
+    );
+
+    for (const ordonnance of ordonnances) {
+      await queryPromise(
+        connection,
+        `INSERT INTO Ordonnance SET ?`,
+        ordonnance
+      );
+      console.log("✅ Restored Ordonnance:", ordonnance.id_ordonnance);
+
+      // Restore Medicaments
+      const medicaments = await queryPromise(
+        connectionArchive,
+        `SELECT * FROM archive.MedicamentsInOrdonnance WHERE ordonnance_id = ?`,
+        [ordonnance.id_ordonnance]
+      );
+
+      for (const medicament of medicaments) {
+        await queryPromise(
+          connection,
+          `INSERT INTO MedicamentsInOrdonnance SET ?`,
+          medicament
+        );
+      }
+      console.log(
+        `✅ Restored ${medicaments.length} medicaments for ordonnance: ${ordonnance.id_ordonnance}`
+      );
+    }
+
+    // Delete archived Consultation and related
+    await queryPromise(
+      connectionArchive,
+      `DELETE FROM archive.Consultation WHERE id_consultation = ?`,
+      [id_consultation]
+    );
+
+    await queryPromise(
+      connectionArchive,
+      `DELETE FROM archive.Examen_Medical WHERE consultation_id = ?`,
+      [id_consultation]
+    );
+
+    await queryPromise(
+      connectionArchive,
+      `DELETE FROM archive.Ordonnance WHERE consultation_id = ?`,
+      [id_consultation]
+    );
+  }
+
+  console.log("✅ All consultations restored for patient:", patientId);
+};
+
+const restoreDossierMedical = async (userId) => {
+  const dossierRows = await queryPromise(
+    connectionArchive,
+    `SELECT * FROM archive.Dossier_Medical WHERE utilisateur_id = ?`,
+    [userId]
+  );
+
+  if (dossierRows.length === 0) {
+    console.log("ℹ️ No archived Dossier_Medical found.");
+    return;
+  }
+
+  const dossier = dossierRows[0];
+
+  const insertDossierQuery = `
+    INSERT INTO Dossier_Medical (
+      id, date_creation, groupeSanguin, numSecuriteSociale, adresse, situation_famille, 
+      taille, poids, tabac_fume, tabac_fume_nombre, tabac_chique, tabac_chique_nombre, 
+      tabac_pris, tabac_pris_nombre, age_pris, ancien_fume, periode_exposition, alcool, 
+      medicaments, affectionsCongenitales, maladiesGenerales, interventionsChirurgicales, 
+      reactionsAllergiques, notes, statut, date_naissance, nom, prenom, num_tel, utilisateur_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  await queryPromise(connection, insertDossierQuery, [
+    dossier.id,
+    dossier.date_creation,
+    dossier.groupeSanguin,
+    dossier.numSecuriteSociale,
+    dossier.adresse,
+    dossier.situation_famille,
+    dossier.taille,
+    dossier.poids,
+    dossier.tabac_fume,
+    dossier.tabac_fume_nombre,
+    dossier.tabac_chique,
+    dossier.tabac_chique_nombre,
+    dossier.tabac_pris,
+    dossier.tabac_pris_nombre,
+    dossier.age_pris,
+    dossier.ancien_fume,
+    dossier.periode_exposition,
+    dossier.alcool,
+    dossier.medicaments,
+    dossier.affectionsCongenitales,
+    dossier.maladiesGenerales,
+    dossier.interventionsChirurgicales,
+    dossier.reactionsAllergiques,
+    dossier.notes,
+    dossier.statut,
+    dossier.date_naissance,
+    dossier.nom,
+    dossier.prenom,
+    dossier.num_tel,
+    dossier.utilisateur_id,
+  ]);
+
+  console.log("✅ Restored Dossier_Medical");
+
+  await queryPromise(
+    connectionArchive,
+    `DELETE FROM archive.Dossier_Medical WHERE id = ?`,
+    [dossier.id]
+  );
 };
 exports.restoreUtilisateur = async (email) => {
-  return new Promise((resolve, reject) => {
-    console.log("🔁 Start restoring user");
+  try {
+    console.log("➡️ Start restoring user");
 
-    const userQuery = "SELECT * FROM archive.Utilisateur WHERE email = ?";
-    connectionArchive.query(userQuery, [email], async (err, userResults) => {
-      if (err) return reject("❌ Error fetching user from archive: " + err);
-      if (userResults.length === 0) return reject("❌ Archived user not found");
+    // Step 1: Find the user in archive
+    const utilisateurRows = await queryPromise(
+      connectionArchive,
+      `SELECT * FROM archive.Utilisateur WHERE email = ?`,
+      [email]
+    );
 
-      const utilisateur = userResults[0];
+    if (utilisateurRows.length === 0)
+      throw new Error("❌ Archived user not found");
 
-      const restoreUserQuery = `
-        INSERT INTO Utilisateur (id, email, password, verified)
-        VALUES (?, ?, ?, ?)
-      `;
-      connection.query(
-        restoreUserQuery,
-        [
-          utilisateur.id,
-          utilisateur.email,
-          utilisateur.password,
-          utilisateur.verified,
-        ],
-        async (restoreUserErr) => {
-          if (restoreUserErr)
-            return reject("❌ Error restoring Utilisateur: " + restoreUserErr);
+    const utilisateur = utilisateurRows[0];
 
-          try {
-            // ✅ Restore Dossier_Medical if exists
-            await handleRestoreDossierMedical(utilisateur.id);
-          } catch (e) {
-            console.error(e); // optional: return reject(e);
-          }
+    // Step 2: Restore Utilisateur
+    await queryPromise(
+      connection,
+      `
+      INSERT INTO Utilisateur (id, email, password, verified)
+      VALUES (?, ?, ?, ?)
+      `,
+      [
+        utilisateur.id,
+        utilisateur.email,
+        utilisateur.password,
+        utilisateur.verified,
+      ]
+    );
+    console.log("✅ User restored to Utilisateur");
 
-          // ✅ Now check roles: Patient, Medecin
-          const tables = ["Patient", "Medecin"];
-          const checkTable = (index) => {
-            if (index >= tables.length)
-              return reject("❌ Archived role not found");
+    // Step 3: Check and Restore Role (Patient or Medecin)
+    const tables = ["Patient", "Medecin"];
 
-            const table = tables[index];
-            const roleQuery = `SELECT * FROM archive.${table} WHERE utilisateur_id = ?`;
+    let roleRestored = false;
 
-            connectionArchive.query(
-              roleQuery,
-              [utilisateur.id],
-              async (roleErr, roleResults) => {
-                if (roleErr)
-                  return reject(`❌ Error fetching ${table} from archive: ` + roleErr);
-                if (roleResults.length === 0) return checkTable(index + 1);
-
-                const role = roleResults[0];
-                let insertRoleQuery = "";
-                let insertParams = [];
-
-                if (table === "Medecin") {
-                  insertRoleQuery = `
-                    INSERT INTO Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                  `;
-                  insertParams = [
-                    role.id,
-                    role.matricule,
-                    role.speciality,
-                    role.utilisateur_id,
-                    role.nom,
-                    role.prenom,
-                    role.num_tel,
-                  ];
-                } else if (table === "Patient") {
-                  insertRoleQuery = `
-                    INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  `;
-                  insertParams = [
-                    role.id,
-                    role.utilisateur_id,
-                    role.categorie,
-                    role.matricule,
-                    role.nom,
-                    role.prenom,
-                    role.num_tel,
-                    role.date_naissance,
-                    role.photo,
-                  ];
-                }
-
-                connection.query(
-                  insertRoleQuery,
-                  insertParams,
-                  async (insertRoleErr) => {
-                    if (insertRoleErr)
-                      return reject(`❌ Error restoring ${table}: ` + insertRoleErr);
-
-                    if (table === "Patient") {
-                      try {
-                        const directeurResult = await checkAndRestoreDirecteur(role.id);
-                        console.log(directeurResult);
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }
-
-                    // Clean up archived role and user
-                    connectionArchive.query(
-                      `DELETE FROM archive.${table} WHERE id = ?`,
-                      [role.id]
-                    );
-                    connectionArchive.query(
-                      "DELETE FROM archive.Utilisateur WHERE id = ?",
-                      [utilisateur.id],
-                      (deleteUserErr) => {
-                        if (deleteUserErr)
-                          return reject("❌ Error deleting user from archive: " + deleteUserErr);
-
-                        resolve({
-                          message: `✅ User and ${table} successfully restored.`,
-                          utilisateurId: utilisateur.id,
-                        });
-                      }
-                    );
-                  }
-                );
-              }
-            );
-          };
-
-          checkTable(0);
-        }
+    for (const table of tables) {
+      const roleRows = await queryPromise(
+        connectionArchive,
+        `SELECT * FROM archive.${table} WHERE utilisateur_id = ?`,
+        [utilisateur.id]
       );
-    });
-  });
+
+      if (roleRows.length > 0) {
+        const role = roleRows[0];
+
+        let insertRoleQuery = "";
+        let insertParams = [];
+
+        if (table === "Medecin") {
+          insertRoleQuery = `
+            INSERT INTO Medecin (id, matricule, speciality, utilisateur_id, nom, prenom, num_tel)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `;
+          insertParams = [
+            role.id,
+            role.matricule,
+            role.speciality,
+            role.utilisateur_id,
+            role.nom,
+            role.prenom,
+            role.num_tel,
+          ];
+        } else if (table === "Patient") {
+          insertRoleQuery = `
+            INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+          insertParams = [
+            role.id,
+            role.utilisateur_id,
+            role.categorie,
+            role.matricule,
+            role.nom,
+            role.prenom,
+            role.num_tel,
+            role.date_naissance,
+            role.photo,
+          ];
+        }
+
+        await queryPromise(connection, insertRoleQuery, insertParams);
+        console.log(`✅ ${table} restored.`);
+
+        roleRestored = true;
+
+        // If Patient, restore consultations and dossier
+        if (table === "Patient") {
+          await restoreDossierMedical(utilisateur.id);
+          await restoreConsultationsAndAssociatedData(role.id);
+        }
+
+        // Delete from archive
+        await queryPromise(
+          connectionArchive,
+          `DELETE FROM archive.${table} WHERE id = ?`,
+          [role.id]
+        );
+
+        break; // Exit after restoring the first role
+      }
+    }
+
+    if (!roleRestored) {
+      throw new Error("❌ Archived role not found");
+    }
+
+    // Delete from archive.Utilisateur
+    await queryPromise(
+      connectionArchive,
+      `DELETE FROM archive.Utilisateur WHERE id = ?`,
+      [utilisateur.id]
+    );
+
+    console.log("✅ User and role successfully deleted from archive.");
+
+    return {
+      message: `✅ User and role successfully restored.`,
+      utilisateurId: utilisateur.id,
+    };
+  } catch (error) {
+    console.error("❌ Error in restoreUtilisateur:", error);
+    throw error;
+  }
 };
 exports.getArchivedUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
@@ -601,4 +715,3 @@ exports.getArchivedUtilisateurs = async () => {
     });
   });
 };
-
