@@ -451,13 +451,17 @@ exports.listeRendezVousDemandes = async (req, res) => {
         d.date_depot,
         p.nom,
         p.prenom,
-        r.id_rendezVous
+        r.id_rendezVous,
+        u.email
       FROM 
         rendezVous r
       JOIN 
         demande d ON r.id_demande = d.id_demande
       JOIN 
         Patient p ON r.id_patient = p.id
+        INNER JOIN 
+        Utilisateur u ON p.utilisateur_id = u.id  
+      
      
       WHERE 
         r.statut = 'demandé'
