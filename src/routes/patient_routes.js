@@ -26,7 +26,7 @@ const {
 } = require("../controllers/faceValidationController");
 const {
   demanderRendezVous,
-  annulerRendezVous,
+  annulerRendezVous,getRendezVousByPatientEmail,getDemandesRendezVousByPatientEmail
 } = require("../controllers/rendezVousController");
 
 const router = express.Router();
@@ -61,5 +61,13 @@ router.post("/demanderdv/:email", demanderRendezVous);
 
 //annuler un rendezvous
 router.put("/annulerdv/:id_rdv", annulerRendezVous);
+
+//liste rendezvous dun seul patient
+router.get('/listerendezvousdupatient/:email',
+  getRendezVousByPatientEmail);
+
+  //liste des demandes rendezvous dun seul patient
+router.get('/listedemandesdupatient/:email',
+  getDemandesRendezVousByPatientEmail);
 
 module.exports = router;
