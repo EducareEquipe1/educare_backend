@@ -182,50 +182,20 @@ exports.createConsultation = async (req, res) => {
 };
 exports.modifyConsultation = async (req, res) => {
   const { id_consultation } = req.params;
-  const {
-    type,
-    symptomes,
-    observations,
-    diagnostic,
-    piece,
-    motif,
-    id_rendezVous,
-  } = req.body;
+  const updateFields = { ...req.body };
 
-  const date = new Date().toISOString().slice(0, 10);
+  // Optional: always update the date if required
+  updateFields.date = new Date().toISOString().slice(0, 10);
 
   try {
-    // Create the consultation record
-    const Consultation = await ModifyConsultation({
-      id_consultation: id_consultation,
-      date: new Date(date).toISOString().slice(0, 10), // ensures 'YYYY-MM-DD'
-      type,
-      symptomes,
-      observations,
-      diagnostic,
-      piece,
-      motif,
-      id_rendezVous,
-    });
-    console.log({
-      id: id_consultation,
-      date: new Date(date).toISOString().slice(0, 10), // ensures 'YYYY-MM-DD'
-      type,
-      symptomes,
-      observations,
-      diagnostic,
-      piece,
-      motif,
-      id_rendezVous,
-    });
-    return res.status(201).json(Consultation);
+    const result = await ModifyConsultation(id_consultation, updateFields);
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Error modifying consultation:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error while creating consultation" });
+    return res.status(500).json({ message: "Server error while updating consultation" });
   }
 };
+
 
 exports.createOrdonnanceController = async (req, res) => {
   const { consultation_id } = req.params;

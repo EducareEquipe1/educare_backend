@@ -158,41 +158,34 @@ exports.createConsultation = async (data) => {
   });
 };
 
-exports.ModifyConsultation = async (data) => {
+exports.ModifyConsultation = (id_consultation, data) => {
   return new Promise((resolve, reject) => {
+    const fields = [];
+    const values = [];
+
+    for (const [key, value] of Object.entries(data)) {
+      fields.push(`\`${key}\` = ?`);
+      values.push(value);
+    }
+
+    values.push(id_consultation); // for WHERE clause
+
     const sql = `
       UPDATE Consultation
-      SET \`date\` = ?, \`type\` = ?, symptomes = ?, observations = ?, diagnostic = ?, piece = ?, motif = ?, id_rendezVous = ?
+      SET ${fields.join(', ')}
       WHERE id_consultation = ?
     `;
-
-    const values = [
-      data.date,
-      data.type,
-      data.symptomes,
-      data.observations,
-      data.diagnostic,
-      data.piece,
-      data.motif,
-      data.id_rendezVous ?? null,
-      data.id_consultation,
-    ];
 
     connection.query(sql, values, (err, result) => {
       if (err) return reject("❌ Error updating consultation: " + err.message);
       if (result.affectedRows === 0) {
-        return resolve({
-          success: false,
-          message: "⚠️ Consultation not found to update.",
-        });
+        return resolve({ success: false, message: "⚠️ Consultation not found to update." });
       }
-      resolve({
-        success: true,
-        message: "✅ Consultation updated successfully",
-      });
+      resolve({ success: true, message: "✅ Consultation updated successfully" });
     });
   });
 };
+
 
 exports.createOrdonnance = async (data) => {
   return new Promise((resolve, reject) => {
