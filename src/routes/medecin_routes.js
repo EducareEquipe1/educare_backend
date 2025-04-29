@@ -223,7 +223,7 @@ router.put("/modifierrdv/:id_rendezVous",
   modifierRendezVous
 )
 
-<<<<<<< HEAD
+
 //annuler un rendez vous
 router.put(
   "/annulerdv/:id_rdv",
@@ -232,7 +232,7 @@ router.put(
   annulerRendezVous
 );
 //annuler un rendez
-=======
+
 
   //annuler un rendez vous
   router.put("/annulerdv/:id_rdv",
@@ -241,7 +241,6 @@ router.put(
     annulerRendezVous);
     
     
->>>>>>> 7f204843c148e091e71963ef1fccc6937d3f5ee2
 //refuser un rendez vous
 router.put(
   "/refuserdv/:id_rdv",
