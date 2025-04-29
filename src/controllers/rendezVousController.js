@@ -414,6 +414,7 @@ exports.listeRendezVous = async (req, res) => {
       SELECT 
         p.nom, 
         p.prenom, 
+        u.email,      
         r.date, 
         r.heure, 
         r.statut,
@@ -423,9 +424,10 @@ exports.listeRendezVous = async (req, res) => {
         rendezVous r
       INNER JOIN 
         Patient p ON r.id_patient = p.id
-     
+      INNER JOIN 
+        Utilisateur u ON p.utilisateur_id = u.id  
       WHERE 
-        r.statut IN ('programmé', 'annulé', 'terminé','refusé')
+        r.statut IN ('programmé', 'annulé', 'terminé')
       ORDER BY 
         r.date ASC, r.heure ASC
       `
@@ -448,13 +450,18 @@ exports.listeRendezVousDemandes = async (req, res) => {
         r.motif,
         d.date_depot,
         p.nom,
-        p.prenom
+        p.prenom,
+        r.id_rendezVous,
+        u.email
       FROM 
         rendezVous r
       JOIN 
         demande d ON r.id_demande = d.id_demande
       JOIN 
         Patient p ON r.id_patient = p.id
+        INNER JOIN 
+        Utilisateur u ON p.utilisateur_id = u.id  
+      
      
       WHERE 
         r.statut = 'demandé'
