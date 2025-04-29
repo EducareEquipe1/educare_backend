@@ -15,17 +15,30 @@ const {
 const {
   updateMedicalRecord,
 } = require("../controllers/dossierMedicalController");
-const { getUtilisateur } = require("../controllers/getUsersController");
+const {
+  getUtilisateur,
+  getAllPatients,
+} = require("../controllers/getUsersController");
 
-const { searchPatients, searchMedicaments } = require("../controllers/searchControllers");
+const {
+  searchPatients,
+  searchMedicaments,
+} = require("../controllers/searchControllers");
 
-const { programmerRendezVous,getDemandesRendezVousByPatientEmail,
-  getRendezVousByPatientEmail,programmerRendezVousParMedecin,programmerDirectementRendezVous,modifierRendezVous,
-  refuserRendezVous,annulerRendezVous,terminerRendezVous,getConsultation,listeRendezVousDemandes ,
-  listeRendezVous} =require("../controllers/rendezVousController")
-
-
-
+const {
+  programmerRendezVous,
+  getDemandesRendezVousByPatientEmail,
+  getRendezVousByPatientEmail,
+  programmerRendezVousParMedecin,
+  programmerDirectementRendezVous,
+  modifierRendezVous,
+  refuserRendezVous,
+  annulerRendezVous,
+  terminerRendezVous,
+  getConsultation,
+  listeRendezVousDemandes,
+  listeRendezVous,
+} = require("../controllers/rendezVousController");
 
 const {
   createExamenMedical,
@@ -39,8 +52,10 @@ const {
   deleteConsultationController,
   getConsultationsbyIdController,
 } = require("../controllers/consultationController");
-const { deleteOrdonnance, deleteConsultation } = require("../models/consultationModel");
-
+const {
+  deleteOrdonnance,
+  deleteConsultation,
+} = require("../models/consultationModel");
 
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
@@ -98,7 +113,7 @@ router.get(
   doctorMiddleware,
   getUtilisateur
 );
-
+router.get("/get-patient/", authMiddleware, doctorMiddleware, getAllPatients);
 //we test it this way ! search-patient?q=amine
 router.get("/search-patient", authMiddleware, doctorMiddleware, searchPatients);
 router.post(
@@ -120,14 +135,18 @@ router.patch(
   modifyConsultation
 );
 
-
 router.get(
   "/consultations-patient/:email",
   authMiddleware,
   doctorMiddleware,
   getConsultationsbyEmailController
 );
-router.get("/search-medicament", authMiddleware, doctorMiddleware, searchMedicaments);
+router.get(
+  "/search-medicament",
+  authMiddleware,
+  doctorMiddleware,
+  searchMedicaments
+);
 
 router.post(
   "/create-ordonnance/:consultation_id",
@@ -167,65 +186,70 @@ router.delete(
 );
 
 //programmer un rendezvous demandé par le patient
-router.put("/programmerdv/:id_rdv",
+router.put(
+  "/programmerdv/:id_rdv",
   authMiddleware,
   doctorMiddleware,
   programmerRendezVous
-
-)
+);
 //programmer rendez vous par medecin quand il le programme apres la consultation de listes patient
-router.post("/programmerdvpatient/:email",
+router.post(
+  "/programmerdvpatient/:email",
   authMiddleware,
   doctorMiddleware,
   programmerRendezVousParMedecin
-)
+);
 
 //  //programmer un rendez vous depuis le bouton ajoiter du calendrier
-router.post("/programmerrdvdirect",
+router.post(
+  "/programmerrdvdirect",
   authMiddleware,
   doctorMiddleware,
   programmerDirectementRendezVous
-)
+);
 
 //modifier un rendezvous
-router.put("/modifierrdv/:id_rendezVous",
+router.put(
+  "/modifierrdv/:id_rendezVous",
   authMiddleware,
   doctorMiddleware,
   modifierRendezVous
-)
+);
 //terminer un rendezvous
-router.put("/terminerdv/:id_rdv",
+router.put(
+  "/terminerdv/:id_rdv",
   authMiddleware,
-  doctorMiddleware, 
-  terminerRendezVous);
-  //annuler un rendez vous
-  router.put("/annulerdv/:id_rdv",
-    authMiddleware,
-    doctorMiddleware, 
-    annulerRendezVous);
-    //annuler un rendez 
+  doctorMiddleware,
+  terminerRendezVous
+);
+//annuler un rendez vous
+router.put(
+  "/annulerdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware,
+  annulerRendezVous
+);
+//annuler un rendez
 //refuser un rendez vous
-router.put("/refuserdv/:id_rdv",
+router.put(
+  "/refuserdv/:id_rdv",
   authMiddleware,
-  doctorMiddleware, 
-  refuserRendezVous);
-  //get consultation du rendezvous
-  router.get("/consultation/:id_rdv",
-    authMiddleware,
-    getConsultation);
-   // get liste des rendez vous
-    router.get('/listedesrendezvous',
-    listeRendezVous);
-    // gte liste des demandes
-router.get('/listedesdemandes',
-  listeRendezVousDemandes);
+  doctorMiddleware,
+  refuserRendezVous
+);
+//get consultation du rendezvous
+router.get("/consultation/:id_rdv", authMiddleware, getConsultation);
+// get liste des rendez vous
+router.get("/listedesrendezvous", listeRendezVous);
+// gte liste des demandes
+router.get("/listedesdemandes", listeRendezVousDemandes);
 //liste rendezvous dun seul patient
-router.get('/listerendezvousdupatient/:email',
-  getRendezVousByPatientEmail);
+router.get("/listerendezvousdupatient/:email", getRendezVousByPatientEmail);
 
-  //liste des demandes rendezvous dun seul patient
-router.get('/listedemandesdupatient/:email',
-  getDemandesRendezVousByPatientEmail);
+//liste des demandes rendezvous dun seul patient
+router.get(
+  "/listedemandesdupatient/:email",
+  getDemandesRendezVousByPatientEmail
+);
 
-  
-module.exports = router; 
+module.exports = router;
