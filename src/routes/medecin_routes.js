@@ -222,12 +222,8 @@ router.put("/modifierrdv/:id_rendezVous",
   doctorMiddleware,
   modifierRendezVous
 )
-//terminer un rendezvous
-router.put(
-  "/terminerdv/:id_rdv",
-  authMiddleware,
-  doctorMiddleware, 
-  terminerRendezVous);
+
+
   //annuler un rendez vous
   router.put("/annulerdv/:id_rdv",
     authMiddleware,
