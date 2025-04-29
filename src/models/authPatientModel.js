@@ -260,7 +260,7 @@ exports.getAllPatients = async () => {
         p.nom AS nom, 
         p.prenom AS prenom
       FROM Utilisateur u
-      LEFT JOIN Patient p ON u.id = p.utilisateur_id
+      JOIN Patient p ON u.id = p.utilisateur_id
     `;
 
     connection.query(sql, (err, results) => {
