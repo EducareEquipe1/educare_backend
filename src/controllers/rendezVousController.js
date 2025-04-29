@@ -615,4 +615,48 @@ exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
   }
 };
 
-  
+
+  // Annuler une demande non programmée (par le patient)
+exports.annulerDemandeNonProgramme = async (req, res) => {
+  const { email, id_rdv } = req.params;
+
+  try {
+    // 1. Vérifier que le rendez-vous existe et est en statut "demandé"
+    const [rdvRows] = await db.execute(
+      "SELECT id_patient, statut FROM rendezVous WHERE id_rendezVous = ?",
+      [id_rdv]
+    );
+
+    if (rdvRows.length === 0) {
+      return res.status(404).json({ error: "Rendez-vous introuvable." });
+    }
+
+    const rdv = rdvRows[0];
+
+    if (rdv.statut !== "demandé") {
+      return res.status(400).json({ error: "Seules les demandes non programmées peuvent être annulées." });
+    }
+
+    // 2. Vérifier que le rendez-vous appartient bien au patient identifié par l'email
+    const [userRows] = await db.execute("SELECT id FROM Utilisateur WHERE email = ?", [email]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+    }
+
+    const id_utilisateur = userRows[0].id;
+
+    const [patientRows] = await db.execute("SELECT id FROM Patient WHERE utilisateur_id = ?", [id_utilisateur]);
+    if (patientRows.length === 0 || patientRows[0].id !== rdv.id_patient) {
+      return res.status(403).json({ error: "Ce rendez-vous ne vous appartient pas." });
+    }
+
+    // 3. Supprimer le rendez-vous
+    await db.execute("DELETE FROM rendezVous WHERE id_rendezVous = ?", [id_rdv]);
+
+    res.status(200).json({ message: "Demande de rendez-vous annulée avec succès." });
+
+  } catch (error) {
+    console.error("Erreur lors de l'annulation de la demande:", error);
+    res.status(500).json({ error: "Erreur interne du serveur." });
+  }
+};

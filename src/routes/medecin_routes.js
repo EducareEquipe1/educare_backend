@@ -209,11 +209,12 @@ router.put("/terminerdv/:id_rdv",
     doctorMiddleware, 
     annulerRendezVous);
     //annuler un rendez 
+    */
 //refuser un rendez vous
 router.put("/refuserdv/:id_rdv",
   authMiddleware,
   doctorMiddleware, 
-  refuserRendezVous);*/
+  refuserRendezVous);
 
   //get consultation du rendezvous
   router.get("/consultation/:id_rdv",
