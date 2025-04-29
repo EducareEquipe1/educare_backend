@@ -184,6 +184,10 @@ router.delete(
   doctorMiddleware,
   deleteConsultationController
 );
+router.post("/programmerrdvdirect",
+  authMiddleware,
+doctorMiddleware,
+programmerDirectementRendezVous);
 
 //programmer un rendezvous demandé par le patient
 router.put(
@@ -191,7 +195,8 @@ router.put(
   authMiddleware,
   doctorMiddleware,
   programmerRendezVous
-);
+
+)
 //programmer rendez vous par medecin quand il le programme apres la consultation de listes patient
 router.post(
   "/programmerdvpatient/:email",
@@ -209,12 +214,11 @@ router.post(
 );
 
 //modifier un rendezvous
-router.put(
-  "/modifierrdv/:id_rendezVous",
+router.put("/modifierrdv/:id_rendezVous",
   authMiddleware,
   doctorMiddleware,
   modifierRendezVous
-);
+)
 //terminer un rendezvous
 router.put(
   "/terminerdv/:id_rdv",
@@ -234,15 +238,18 @@ router.put(
 router.put(
   "/refuserdv/:id_rdv",
   authMiddleware,
-  doctorMiddleware,
-  refuserRendezVous
-);
-//get consultation du rendezvous
-router.get("/consultation/:id_rdv", authMiddleware, getConsultation);
-// get liste des rendez vous
-router.get("/listedesrendezvous", listeRendezVous);
-// gte liste des demandes
-router.get("/listedesdemandes", listeRendezVousDemandes);
+  doctorMiddleware, 
+  refuserRendezVous);
+  //get consultation du rendezvous
+  router.get("/consultation/:id_rdv",
+    authMiddleware,
+    getConsultation);
+   // get liste des rendez vous
+    router.get('/listedesrendezvous',
+    listeRendezVous);
+    // gte liste des demandes
+router.get('/listedesdemandes',
+  listeRendezVousDemandes);
 //liste rendezvous dun seul patient
 router.get("/listerendezvousdupatient/:email", getRendezVousByPatientEmail);
 
