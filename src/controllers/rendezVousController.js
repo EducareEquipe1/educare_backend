@@ -58,175 +58,140 @@ exports.demanderRendezVous = async (req, res) => {
   }
 };
 
+exports.programmerRendezVous = async (req, res) => {
+  const { id_rdv } = req.params;
+  const { email, nom, prenom, date_rdv, heure_rdv } = req.body;
+
+  try {
+    const [rdvRows] = await db.execute(
+      "SELECT statut FROM rendezVous WHERE id_rendezVous = ?",
+      [id_rdv]
+    );
+
+    if (rdvRows.length === 0) {
+      return res.status(404).json({ error: "Rendez-vous introuvable." });
+    }
+
+    const rdv = rdvRows[0];
+
+    if (rdv.statut !== 'demandé') {
+      return res.status(400).json({ error: "Ce rendez-vous n'est pas en statut demandé." });
+    }
+
+    const [userRows] = await db.execute(
+      "SELECT id FROM Utilisateur WHERE email = ?",
+      [email]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
+    }
+
+    const id_utilisateur = userRows[0].id;
+
+    const [patientRows] = await db.execute(
+      "SELECT id FROM Patient WHERE utilisateur_id = ?",
+      [id_utilisateur]
+    );
+
+    if (patientRows.length === 0) {
+      return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
+    }
+
+    const id_patient = patientRows[0].id;
+
+    // 🔍 Vérifier qu'aucun autre rendez-vous n'est déjà programmé à cette date/heure
+    const [existingRdvRows] = await db.execute(
+      "SELECT id_rendezVous FROM rendezVous WHERE date = ? AND heure = ? AND id_rendezVous != ?",
+      [date_rdv, heure_rdv, id_rdv]
+    );
+
+    if (existingRdvRows.length > 0) {
+      return res.status(400).json({ error: "Un autre rendez-vous est déjà programmé à cette date et heure." });
+    }
+
+    // ✅ Mise à jour du rendez-vous
+    await RendezVous.programmer(id_rdv, date_rdv, heure_rdv);
+
+    res.status(200).json({ message: "Rendez-vous programmé avec succès." });
+
+  } catch (error) {
+    console.error("Erreur lors de la programmation du rendez-vous:", error);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+};
+
   
    
-  exports.programmerRendezVous = async (req, res) => {
-    const { id_rdv } = req.params; 
-    const { email, nom, prenom, date_rdv, heure_rdv } = req.body;
-  
-    try {
-      // 1. Vérifier que le rendez-vous existe
-      const [rdvRows] = await db.execute(
-        "SELECT statut FROM rendezVous WHERE id_rendezVous = ?",
-        [id_rdv]
-      );
-  
-      if (rdvRows.length === 0) {
-        return res.status(404).json({ error: "Rendez-vous introuvable." });
-      }
-  
-      const rdv = rdvRows[0];
-  
-      if (rdv.statut !== 'demandé') {
-        return res.status(400).json({ error: "Ce rendez-vous n'est pas en statut demandé." });
-      }
-  
-      // 2. Vérifier que l'utilisateur existe (email, nom, prenom)
-      const [userRows] = await db.execute(
-        "SELECT id FROM Utilisateur WHERE email = ?",
-        [email]
-      );
-  
-      if (userRows.length === 0) {
-        return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
-      }
-  
-      const id_utilisateur = userRows[0].id;
-  
-      // 3. Vérifier que c'est bien un patient
-      const [patientRows] = await db.execute(
-        "SELECT id FROM Patient WHERE utilisateur_id = ?",
-        [id_utilisateur]
-      );
-  
-      if (patientRows.length === 0) {
-        return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
-      }
-  
-      const id_patient = patientRows[0].id;
-  
-      // 4. Mettre à jour le rendez-vous (date, heure, statut = programmé)
-      await RendezVous.programmer(id_rdv, date_rdv, heure_rdv);
-  
-      res.status(200).json({ message: "Rendez-vous programmé avec succès." });
-  
-    } catch (error) {
-      console.error("Erreur lors de la programmation du rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur." });
+ 
+exports.programmerRendezVousParMedecin = async (req, res) => {
+  const { email } = req.params; // Email passé dans l'URL
+  const { date_rdv, heure_rdv, motif } = req.body;
+
+  try {
+    // 1. Vérification des champs requis
+    if (!date_rdv || !heure_rdv || !motif) {
+      return res.status(400).json({ error: "Les champs date, heure et motif sont requis." });
     }
-  };
-  
-  //programmer rendez vous par medecin quand il le programme apres la consultation de patient
-  exports.programmerRendezVousParMedecin = async (req, res) => {
-    const { email } = req.params; // Email passé dans l'URL
-    const { date_rdv, heure_rdv, motif } = req.body;
-  
-    try {
-      // 1. Vérification des champs requis
-      if (!date_rdv || !heure_rdv || !motif) {
-        return res.status(400).json({ error: "Les champs date, heure et motif sont requis." });
-      }
-  
-      // 2. Récupérer l'utilisateur par email
-      const [utilisateurRows] = await db.execute(
-        "SELECT id FROM Utilisateur WHERE email = ?",
-        [email]
-      );
-  
-      if (utilisateurRows.length === 0) {
-        return res.status(404).json({ error: "Utilisateur non trouvé." });
-      }
-  
-      const id_utilisateur = utilisateurRows[0].id;
-  
-      // 3. Récupérer le patient lié à cet utilisateur
-      const [patientRows] = await db.execute(
-        "SELECT id FROM Patient WHERE utilisateur_id = ?",
-        [id_utilisateur]
-      );
-  
-      if (patientRows.length === 0) {
-        return res.status(404).json({ error: "Aucun patient lié à cet utilisateur." });
-      }
-  
-      const id_patient = patientRows[0].id;
-  
-      // 4. Créer le rendez-vous avec statut "programmé"
-      const [result] = await db.execute(
-        "INSERT INTO rendezVous (id_patient, date, heure, motif, statut, email) VALUES (?, ?, ?, ?, 'programmé', ?)",
-        [id_patient, date_rdv, heure_rdv, motif, email]
-      );
-  
-      const id_rdv = result.insertId;
-  
-      res.status(201).json({
-        message: "Rendez-vous programmé avec succès par le médecin.",
-        id_rdv
+
+    // 2. Récupérer l'utilisateur par email
+    const [utilisateurRows] = await db.execute(
+      "SELECT id FROM Utilisateur WHERE email = ?",
+      [email]
+    );
+
+    if (utilisateurRows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur non trouvé." });
+    }
+
+    const id_utilisateur = utilisateurRows[0].id;
+
+    // 3. Récupérer le patient lié à cet utilisateur
+    const [patientRows] = await db.execute(
+      "SELECT id FROM Patient WHERE utilisateur_id = ?",
+      [id_utilisateur]
+    );
+
+    if (patientRows.length === 0) {
+      return res.status(404).json({ error: "Aucun patient lié à cet utilisateur." });
+    }
+
+    const id_patient = patientRows[0].id;
+
+    // 4. Vérifier s'il existe déjà un rendez-vous à la même date et heure
+    const [existingRdvRows] = await db.execute(
+      "SELECT id_rendezVous FROM rendezVous WHERE date = ? AND heure = ?",
+      [date_rdv, heure_rdv]
+    );
+
+    if (existingRdvRows.length > 0) {
+      return res.status(400).json({
+        error: "Un rendez-vous existe déjà à cette date et cette heure."
       });
-  
-    } catch (error) {
-      console.error("Erreur lors de la programmation par le médecin:", error);
-      res.status(500).json({ error: "Erreur interne du serveur." });
     }
-  };
-  
-  //programmer un rendez vous depuis le bouton ajouter du calendrier
-  /*exports.programmerDirectementRendezVous = async (req, res) => {
-    const { email, date_rdv, heure_rdv, motif} = req.body;
-  
-    try {
-      // 1. Vérifier que l'utilisateur existe (et récupérer son nom/prenom)
-      const [userRows] = await db.execute(
-        "SELECT id FROM Utilisateur WHERE email = ?",
-        [email]
-      );
-  
-      if (userRows.length === 0) {
-        return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
-      }
-  
-      const id_utilisateur = userRows[0].id;
-      const nom = userRows[0].nom;
-      const prenom = userRows[0].prenom;
-  
-      // 2. Vérifier que c'est bien un patient
-      const [patientRows] = await db.execute(
-        "SELECT id FROM Patient WHERE utilisateur_id = ?",
-        [id_utilisateur]
-      );
-  
-      if (patientRows.length === 0) {
-        return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
-      }
-  
-      const id_patient = patientRows[0].id;
-  
-      // 3. Créer directement le rendez-vous
-      const [result] = await db.execute(
-        "INSERT INTO rendezVous (id_patient, date, heure, motif, statut, email) VALUES (?, ?, ?, ?, 'programmé', ?)",
-        [id_patient, date_rdv, heure_rdv, motif, email]
-      );
-  
-      const id_rdv = result.insertId;
-  
-      res.status(201).json({
-        message: "Rendez-vous programmé avec succès par le médecin.",
-        id_rdv,
-        patient: {
-          nom,
-          prenom,
-          email
-        }
-      });
-  
-    } catch (error) {
-      console.error("Erreur lors de la programmation directe du rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur." });
-    }
-  };*/
-  // Programmer un rendez-vous depuis le bouton ajouter du calendrier
+
+    // 5. Créer le rendez-vous avec statut "programmé"
+    const [result] = await db.execute(
+      "INSERT INTO rendezVous (id_patient, date, heure, motif, statut, email) VALUES (?, ?, ?, ?, 'programmé', ?)",
+      [id_patient, date_rdv, heure_rdv, motif, email]
+    );
+
+    const id_rdv = result.insertId;
+
+    res.status(201).json({
+      message: "Rendez-vous programmé avec succès par le médecin.",
+      id_rdv
+    });
+
+  } catch (error) {
+    console.error("Erreur lors de la programmation par le médecin:", error);
+    res.status(500).json({ error: "Erreur interne du serveur." });
+  }
+};
+
+ // Programmer un rendez-vous depuis le bouton ajouter du calendrier
 exports.programmerDirectementRendezVous = async (req, res) => {
-  const { email, date_rdv, heure_rdv, motif, nom, prenom } = req.body; // ✅ récupérer nom et prénom directement
+  const { email, date_rdv, heure_rdv, motif, nom, prenom } = req.body;
 
   try {
     // 1. Vérifier que l'utilisateur existe
@@ -253,7 +218,19 @@ exports.programmerDirectementRendezVous = async (req, res) => {
 
     const id_patient = patientRows[0].id;
 
-    // 3. Créer directement le rendez-vous
+    // 3. Vérifier s'il existe déjà un rendez-vous à cette date et heure
+    const [existingRdvRows] = await db.execute(
+      "SELECT id_rendezVous FROM rendezVous WHERE date = ? AND heure = ?",
+      [date_rdv, heure_rdv]
+    );
+
+    if (existingRdvRows.length > 0) {
+      return res.status(400).json({
+        error: "Un rendez-vous est déjà programmé à cette date et heure."
+      });
+    }
+
+    // 4. Créer directement le rendez-vous
     const [result] = await db.execute(
       "INSERT INTO rendezVous (id_patient, date, heure, motif, statut, email) VALUES (?, ?, ?, ?, 'programmé', ?)",
       [id_patient, date_rdv, heure_rdv, motif, email]
@@ -340,7 +317,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     }
   };
   
-
+*/
 
 exports.annulerRendezVous = async (req, res) => {
     const { id_rdv } = req.params;
@@ -353,7 +330,7 @@ exports.annulerRendezVous = async (req, res) => {
     }
   };
   
-
+/*
 exports.terminerRendezVous = async (req, res) => {
   const { id_rdv } = req.params;
   try {
@@ -362,7 +339,76 @@ exports.terminerRendezVous = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Erreur lors de la terminaison" });
   }
+}; */
+exports.modifierRendezVous = async (req, res) => {
+  const { id_rdv } = req.params;
+  const { date_rdv, heure_rdv, motif, statut } = req.body;
+
+  try {
+    // Vérifier si le rendez-vous existe
+    const [rows] = await db.execute(
+      "SELECT * FROM rendezVous WHERE id_rendezVous = ?",
+      [id_rdv]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Rendez-vous introuvable." });
+    }
+
+    const rdv = rows[0];
+
+    // Ne rien faire si aucun champ fourni
+    if (!date_rdv && !heure_rdv && !motif && !statut) {
+      return res.status(400).json({ error: "Aucune donnée à mettre à jour." });
+    }
+
+    // Interdire mise à jour si déjà terminé ou annulé (sauf si on veut changer statut)
+    if ((rdv.statut === "annulé" || rdv.statut === "terminé") && !statut) {
+      return res.status(400).json({ error: `Impossible de modifier un rendez-vous ${rdv.statut}.` });
+    }
+
+    const updateFields = [];
+    const updateValues = [];
+
+    if (date_rdv) {
+      updateFields.push("date = ?");
+      updateValues.push(date_rdv);
+    }
+
+    if (heure_rdv) {
+      updateFields.push("heure = ?");
+      updateValues.push(heure_rdv);
+    }
+
+    if (motif) {
+      updateFields.push("motif = ?");
+      updateValues.push(motif);
+    }
+
+    if (statut) {
+      if (!["programmé", "annulé", "terminé", "refusé"].includes(statut)) {
+        return res.status(400).json({ error: "Statut invalide." });
+      }
+      updateFields.push("statut = ?");
+      updateValues.push(statut);
+    }
+
+    updateValues.push(id_rdv);
+
+    // Mise à jour
+    await db.execute(
+      `UPDATE rendezVous SET ${updateFields.join(", ")} WHERE id_rendezVous = ?`,
+      updateValues
+    );
+
+    res.status(200).json({ message: "Rendez-vous mis à jour avec succès." });
+
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du rendez-vous:", error);
+    res.status(500).json({ error: "Erreur interne du serveur." });
+  }
 };
+
 
 exports.getConsultation = async (req, res) => {
   const { id_rdv } = req.params;

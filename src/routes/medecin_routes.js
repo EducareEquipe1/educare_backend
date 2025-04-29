@@ -164,6 +164,10 @@ router.delete(
   doctorMiddleware,
   deleteConsultationController
 );
+router.post("/programmerrdvdirect",
+  authMiddleware,
+doctorMiddleware,
+programmerDirectementRendezVous);
 
 //programmer un rendezvous demandé par le patient
 router.put("/programmerdv/:id_rdv",
@@ -171,27 +175,28 @@ router.put("/programmerdv/:id_rdv",
   doctorMiddleware,
   programmerRendezVous
 
-)
+);
 //programmer rendez vous par medecin quand il le programme apres la consultation de listes patient
 router.post("/programmerdvpatient/:email",
   authMiddleware,
   doctorMiddleware,
   programmerRendezVousParMedecin
-)
+);
 
 //  //programmer un rendez vous depuis le bouton ajoiter du calendrier
 router.post("/programmerrdvdirect",
   authMiddleware,
   doctorMiddleware,
   programmerDirectementRendezVous
-)
+);
 
 //modifier un rendezvous
-router.put("/modifierrdv/:id_rendezVous",
+router.patch("/modifierrdv/:id_rdv",
   authMiddleware,
   doctorMiddleware,
   modifierRendezVous
-)
+);
+/*
 //terminer un rendezvous
 router.put("/terminerdv/:id_rdv",
   authMiddleware,
@@ -207,7 +212,8 @@ router.put("/terminerdv/:id_rdv",
 router.put("/refuserdv/:id_rdv",
   authMiddleware,
   doctorMiddleware, 
-  refuserRendezVous);
+  refuserRendezVous);*/
+
   //get consultation du rendezvous
   router.get("/consultation/:id_rdv",
     authMiddleware,
