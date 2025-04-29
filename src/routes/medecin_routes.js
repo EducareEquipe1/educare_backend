@@ -113,12 +113,13 @@ router.post(
   doctorMiddleware,
   createExamenMedical
 );
-router.put(
+router.patch(
   "/modify-consultation/:id_consultation",
   authMiddleware,
   doctorMiddleware,
   modifyConsultation
 );
+
 
 router.get(
   "/consultations-patient/:email",
