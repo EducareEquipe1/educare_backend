@@ -256,7 +256,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
 
   exports.modifierRendezVous = async (req, res) => {
     const { id_rendezVous } = req.params;
-    const { date_rdv, heure_rdv, motif } = req.body;
+    const { date_rdv, heure_rdv, motif,statut } = req.body;
   
     try {
       // Vérifier si le rendez-vous existe
@@ -317,7 +317,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     }
   };
   
-*/
+
 
 exports.annulerRendezVous = async (req, res) => {
     const { id_rdv } = req.params;
@@ -345,7 +345,7 @@ exports.modifierRendezVous = async (req, res) => {
   const { date_rdv, heure_rdv, motif, statut } = req.body;
 
   try {
-    // Vérifier si le rendez-vous existe
+    // 1. Vérifier l'existence du rendez-vous
     const [rows] = await db.execute(
       "SELECT * FROM rendezVous WHERE id_rendezVous = ?",
       [id_rdv]
@@ -357,35 +357,40 @@ exports.modifierRendezVous = async (req, res) => {
 
     const rdv = rows[0];
 
-    // Ne rien faire si aucun champ fourni
-    if (!date_rdv && !heure_rdv && !motif && !statut) {
+    // 2. Si aucun champ à mettre à jour n'est fourni
+    if (
+      date_rdv === undefined &&
+      heure_rdv === undefined &&
+      motif === undefined &&
+      statut === undefined
+    ) {
       return res.status(400).json({ error: "Aucune donnée à mettre à jour." });
     }
 
-    // Interdire mise à jour si déjà terminé ou annulé (sauf si on veut changer statut)
-    if ((rdv.statut === "annulé" || rdv.statut === "terminé") && !statut) {
+    // 3. Interdire modification si terminé ou annulé (sauf changement de statut)
+    if ((rdv.statut === "annulé" || rdv.statut === "terminé") && statut === undefined) {
       return res.status(400).json({ error: `Impossible de modifier un rendez-vous ${rdv.statut}.` });
     }
 
     const updateFields = [];
     const updateValues = [];
 
-    if (date_rdv) {
+    if (date_rdv !== undefined) {
       updateFields.push("date = ?");
-      updateValues.push(date_rdv);
+      updateValues.push(date_rdv || null);
     }
 
-    if (heure_rdv) {
+    if (heure_rdv !== undefined) {
       updateFields.push("heure = ?");
-      updateValues.push(heure_rdv);
+      updateValues.push(heure_rdv || null);
     }
 
-    if (motif) {
+    if (motif !== undefined) {
       updateFields.push("motif = ?");
-      updateValues.push(motif);
+      updateValues.push(motif || null);
     }
 
-    if (statut) {
+    if (statut !== undefined) {
       if (!["programmé", "annulé", "terminé", "refusé"].includes(statut)) {
         return res.status(400).json({ error: "Statut invalide." });
       }
@@ -395,7 +400,7 @@ exports.modifierRendezVous = async (req, res) => {
 
     updateValues.push(id_rdv);
 
-    // Mise à jour
+    // 4. Mise à jour dans la BDD
     await db.execute(
       `UPDATE rendezVous SET ${updateFields.join(", ")} WHERE id_rendezVous = ?`,
       updateValues

@@ -85,10 +85,15 @@ exports.createMedicalRecord = async (req, res) => {
     interventionsChirurgicales,
     reactionsAllergiques,
     notes,
+    nom,
+    prenom,
+    num_tel,
+    date_naissance,
+    statut
   } = req.body;
 
   try {
-    // Trouver l'utilisateur via son email
+    // 1. Trouver l'utilisateur
     const utilisateur = await findUserByEmail(email);
     if (!utilisateur) {
       return res.status(404).json({ message: "Utilisateur not found with this email" });
@@ -96,7 +101,7 @@ exports.createMedicalRecord = async (req, res) => {
 
     const utilisateur_id = utilisateur.id;
 
-    // Récupérer les infos patient
+    // 2. Récupérer le patient
     const patientData = await db.query(
       "SELECT * FROM Patient WHERE utilisateur_id = ?",
       {
@@ -110,9 +115,19 @@ exports.createMedicalRecord = async (req, res) => {
     }
 
     const patient = patientData[0];
-    const statut = patient.categorie; // Déjà "Directeur" si le patient l'est
 
-    // Vérifier si un dossier médical existe déjà
+    // 3. Vérifier si le patient est aussi un directeur
+    const directeurData = await db.query(
+      "SELECT * FROM Directeur WHERE patient_id = ?",
+      {
+        replacements: [patient.id],
+        type: db.QueryTypes.SELECT,
+      }
+    );
+
+    const statut = directeurData.length > 0 ? "directeur" : patient.categorie;
+
+    // 4. Vérifier s'il existe déjà un dossier
     const [existingDossier] = await db.query(
       "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
       {
@@ -122,12 +137,10 @@ exports.createMedicalRecord = async (req, res) => {
     );
 
     if (existingDossier) {
-      return res.status(400).json({
-        message: "A medical record already exists for this user",
-      });
+      return res.status(400).json({ message: "A medical record already exists for this user" });
     }
 
-    // Création du dossier médical
+    // 5. Création du dossier médical
     const newDossier = await DossierMedical.create({
       date_creation,
       groupeSanguin,
@@ -152,12 +165,12 @@ exports.createMedicalRecord = async (req, res) => {
       interventionsChirurgicales,
       reactionsAllergiques,
       notes,
-      utilisateur_id: utilisateur_id,
-      nom: patient.nom,
-      prenom: patient.prenom,
-      num_tel: patient.num_tel,
-      date_naissance: patient.date_naissance,
-      statut,
+      utilisateur_id,
+      nom,
+      prenom,
+      num_tel,
+      date_naissance,
+      statut
     });
 
     res.status(201).json(newDossier);
@@ -179,35 +192,61 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
   }
 
   try {
-    const dossier = await DossierMedical.findOne({ where: { email } });
+    const utilisateur = await findUserByEmail(email);
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    const utilisateur_id = utilisateur.id;
+
+    const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
 
     if (!dossier) {
-      return res.status(404).json({ message: "Medical record not found for this patient" });
+      return res.status(404).json({ message: "Dossier médical non trouvé pour cet utilisateur" });
     }
 
     res.status(200).json(dossier);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error retrieving medical record" });
+    res.status(500).json({ message: "Erreur lors de la récupération du dossier médical" });
   }
 });
+
 
 // UPDATE medical record
 exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   const { email } = req.params;
 
-  try {
-    const dossier = await DossierMedical.findOne({ where: { email } });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
-    if (!dossier) {
-      return res.status(404).json({ message: "Medical record not found for this patient" });
+  try {
+    // 1. Trouver l'utilisateur
+    const utilisateur = await findUserByEmail(email);
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur non trouvé avec cet email" });
     }
 
+    const utilisateur_id = utilisateur.id;
+
+    // 2. Trouver le dossier médical correspondant
+    const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
+
+    if (!dossier) {
+      return res.status(404).json({ message: "Dossier médical non trouvé pour cet utilisateur" });
+    }
+
+    // 3. Mise à jour du dossier
     await dossier.update(req.body);
 
-    res.status(200).json({ message: "Medical record updated successfully", dossier });
+    res.status(200).json({
+      message: "Dossier médical mis à jour avec succès",
+      dossier
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error updating medical record" });
+    console.error("Erreur lors de la mise à jour du dossier médical:", error);
+    res.status(500).json({ message: "Erreur serveur lors de la mise à jour" });
   }
 });
+
