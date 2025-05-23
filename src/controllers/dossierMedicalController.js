@@ -50,7 +50,9 @@ exports.getUserMedicalInfo = async (req, res) => {
       prenom: patient.prenom,
       num_tel: patient.num_tel,
       date_naissance: patient.date_naissance,
-      statut
+      statut,
+      email: utilisateur.email,      
+      
     });
 
   } catch (error) {
@@ -65,7 +67,7 @@ exports.getUserMedicalInfo = async (req, res) => {
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
   const {
-    date_creation,
+    
     groupeSanguin,
     numSecuriteSociale,
     adresse,
