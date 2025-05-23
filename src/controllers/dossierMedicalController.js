@@ -64,7 +64,7 @@ exports.getUserMedicalInfo = async (req, res) => {
  */
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
- const {
+  const {
     date_creation,
     groupeSanguin,
     numSecuriteSociale,
@@ -94,6 +94,17 @@ exports.createMedicalRecord = async (req, res) => {
     date_naissance,
     statut
   } = req.body;
+
+  // Fonction utilitaire pour convertir string "oui"/"non" ou "true"/"false" en booléen
+  function toBool(value) {
+    if (typeof value === "string") {
+      const val = value.toLowerCase();
+      if (val === "oui" || val === "true") return true;
+      if (val === "non" || val === "false") return false;
+    }
+    return Boolean(value);
+  }
+
   try {
     const utilisateur = await findUserByEmail(email);
     if (!utilisateur) {
@@ -124,7 +135,7 @@ exports.createMedicalRecord = async (req, res) => {
       }
     );
 
-    const statut = directeurData.length > 0 ? "directeur" : patient.categorie;
+    const statutFinal = directeurData.length > 0 ? "directeur" : patient.categorie;
 
     const [existingDossier] = await db.query(
       "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
@@ -138,24 +149,31 @@ exports.createMedicalRecord = async (req, res) => {
       return res.status(400).json({ message: "Un dossier médical existe déjà pour cet utilisateur" });
     }
 
+    // Convertir les champs string oui/non en booléens
+    const alcoolBool = toBool(alcool);
+    const tabacFumeBool = toBool(tabac_fume);
+    const ancienFumeBool = toBool(ancien_fume);
+    const tabacChiqueBool = toBool(tabac_chique);
+    const tabacPrisBool = toBool(tabac_pris);
+
     const newDossier = await DossierMedical.create({
-      date_creation,
+      date_creation: new Date(),
       groupeSanguin,
       numSecuriteSociale,
       adresse,
       situation_famille,
       taille,
       poids,
-      tabac_fume,
+      tabac_fume: tabacFumeBool,
       tabac_fume_nombre,
-      tabac_chique,
+      tabac_chique: tabacChiqueBool,
       tabac_chique_nombre,
-      tabac_pris,
+      tabac_pris: tabacPrisBool,
       tabac_pris_nombre,
       age_pris,
-      ancien_fume,
+      ancien_fume: ancienFumeBool,
       periode_exposition,
-      alcool,
+      alcool: alcoolBool,
       medicaments,
       affectionsCongenitales,
       maladiesGenerales,
@@ -167,8 +185,7 @@ exports.createMedicalRecord = async (req, res) => {
       prenom,
       num_tel,
       date_naissance,
-      statut
-    
+      statut: statutFinal
     });
 
     res.status(201).json({
@@ -180,6 +197,7 @@ exports.createMedicalRecord = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur lors de la création du dossier médical" });
   }
 };
+
 
 /**
  * GET - Récupérer un dossier médical complet par email
