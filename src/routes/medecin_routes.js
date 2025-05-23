@@ -215,8 +215,24 @@ router.patch("/modifierrdv/:id_rendezVous",
 );
 
 
-  
+
+//annuler un rendez vous
+router.put(
+  "/annulerdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware,
+  annulerRendezVous
+);
+//annuler un rendez
+
+
+  //annuler un rendez vous
+  router.put("/annulerdv/:id_rdv",
+    authMiddleware,
+    doctorMiddleware, 
+    annulerRendezVous);
     
+
 //refuser un rendez vous
 router.put(
   "/refuserdv/:id_rdv",
