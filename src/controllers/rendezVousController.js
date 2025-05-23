@@ -82,7 +82,7 @@ exports.programmerRendezVous = async (req, res) => {
       "SELECT id FROM Utilisateur WHERE email = ?",
       [email]
     );
-
+console.log(email);
     if (userRows.length === 0) {
       return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
     }
@@ -253,7 +253,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     res.status(500).json({ error: "Erreur serveur." });
   }
 };
-
+/*
   exports.modifierRendezVous = async (req, res) => {
     const { id_rendezVous } = req.params;
     const { date_rdv, heure_rdv, motif,statut } = req.body;
@@ -317,7 +317,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     }
   };
   
-
+*/
 
 exports.annulerRendezVous = async (req, res) => {
     const { id_rdv } = req.params;
@@ -341,89 +341,73 @@ exports.terminerRendezVous = async (req, res) => {
   }
 }; */
 exports.modifierRendezVous = async (req, res) => {
-  const { id_rdv } = req.params;
+  const { id_rendezVous } = req.params;
   const { date_rdv, heure_rdv, motif, statut } = req.body;
 
   try {
-    // 1. Vérifier l'existence du rendez-vous
-    const [rows] = await db.execute(
+    const [rendezVousRows] = await db.execute(
       "SELECT * FROM rendezVous WHERE id_rendezVous = ?",
-      [id_rdv]
+      [id_rendezVous]
     );
 
-    if (rows.length === 0) {
+    if (rendezVousRows.length === 0) {
       return res.status(404).json({ error: "Rendez-vous introuvable." });
     }
 
-    const rdv = rows[0];
+    const rdv = rendezVousRows[0];
 
-    // 2. Si aucun champ à mettre à jour n'est fourni
-    if (
-      date_rdv === undefined &&
-      heure_rdv === undefined &&
-      motif === undefined &&
-      statut === undefined
-    ) {
-      return res.status(400).json({ error: "Aucune donnée à mettre à jour." });
-    }
-
-    // 3. Interdire modification si terminé ou annulé (sauf changement de statut)
-    if ((rdv.statut === "annulé" || rdv.statut === "terminé") && statut === undefined) {
+    if (rdv.statut === "annulé" || rdv.statut === "terminé") {
       return res.status(400).json({ error: `Impossible de modifier un rendez-vous ${rdv.statut}.` });
     }
 
+    // Préparer la mise à jour dynamique
     const updateFields = [];
     const updateValues = [];
 
     if (date_rdv !== undefined) {
       updateFields.push("date = ?");
-      updateValues.push(date_rdv || null);
+      updateValues.push(date_rdv);
     }
 
     if (heure_rdv !== undefined) {
       updateFields.push("heure = ?");
-      updateValues.push(heure_rdv || null);
+      updateValues.push(heure_rdv);
     }
 
     if (motif !== undefined) {
       updateFields.push("motif = ?");
-      updateValues.push(motif || null);
+      updateValues.push(motif);
     }
 
     if (statut !== undefined) {
-      if (!["programmé", "annulé", "terminé", "refusé"].includes(statut)) {
-        return res.status(400).json({ error: "Statut invalide." });
-      }
       updateFields.push("statut = ?");
       updateValues.push(statut);
     }
 
-    updateValues.push(id_rdv);
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        error: "Aucun champ valide à modifier. Veuillez fournir au moins un champ : date, heure, motif ou statut."
+      });
+    }
 
-    // 4. Mise à jour dans la BDD
+    updateValues.push(id_rendezVous);
+
     await db.execute(
       `UPDATE rendezVous SET ${updateFields.join(", ")} WHERE id_rendezVous = ?`,
       updateValues
     );
 
-    res.status(200).json({ message: "Rendez-vous mis à jour avec succès." });
+    res.status(200).json({
+      message: "Rendez-vous modifié avec succès.",
+      champs_modifiés: updateFields.map(f => f.split(" = ")[0])
+    });
 
   } catch (error) {
-    console.error("Erreur lors de la mise à jour du rendez-vous:", error);
+    console.error("Erreur lors de la modification du rendez-vous:", error);
     res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };
 
-
-exports.getConsultation = async (req, res) => {
-  const { id_rdv } = req.params;
-  try {
-    const details = await RendezVous.getConsultationDetails(id_rdv);
-    res.status(200).json(details);
-  } catch (error) {
-    res.status(500).json({ error: "Erreur lors de la r\u00e9cup\u00e9ration de la consultation" });
-  }
-};
  
 // refuser un rendez vous
 exports.refuserRendezVous = async (req, res) => {
@@ -492,7 +476,8 @@ exports.listeRendezVous = async (req, res) => {
 };
 
 
-  //liste des demandes
+  
+
   // Liste des rendez-vous demandés
 exports.listeRendezVousDemandes = async (req, res) => {
   try {

@@ -100,12 +100,8 @@ router.get(
   doctorMiddleware,
   getMedicalRecord
 );
-router.put(
-  "/medical-records-update/:email",
-  authMiddleware,
-  doctorMiddleware,
-  updateMedicalRecord
-);
+
+
 // ✅ modified to be compatible with new directeur strecture
 router.get(
   "/get-utilisateur/:email",
@@ -185,12 +181,7 @@ router.delete(
   doctorMiddleware,
   deleteConsultationController
 );
-router.post(
-  "/programmerrdvdirect",
-  authMiddleware,
-  doctorMiddleware,
-  programmerDirectementRendezVous
-);
+
 
 //programmer un rendezvous demandé par le patient
 router.put(
@@ -199,7 +190,7 @@ router.put(
   doctorMiddleware,
   programmerRendezVous
 
-)
+);
 //programmer rendez vous par medecin quand il le programme apres la consultation de listes patient
 router.post(
   "/programmerdvpatient/:email",
@@ -217,19 +208,14 @@ router.post(
 );
 
 //modifier un rendezvous
-router.put("/modifierrdv/:id_rendezVous",
+router.patch("/modifierrdv/:id_rendezVous",
   authMiddleware,
   doctorMiddleware,
   modifierRendezVous
-)
+);
 
 
-  //annuler un rendez vous
-  router.put("/annulerdv/:id_rdv",
-    authMiddleware,
-    doctorMiddleware, 
-    annulerRendezVous);
-    
+  
     
 //refuser un rendez vous
 router.put(
@@ -238,10 +224,7 @@ router.put(
   doctorMiddleware, 
   refuserRendezVous);
 
-  //get consultation du rendezvous
-  router.get("/consultation/:id_rdv",
-    authMiddleware,
-    getConsultation);
+  
    // get liste des rendez vous
     router.get('/listedesrendezvous',
     listeRendezVous);
