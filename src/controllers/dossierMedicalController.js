@@ -64,7 +64,36 @@ exports.getUserMedicalInfo = async (req, res) => {
  */
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
-
+ const {
+    date_creation,
+    groupeSanguin,
+    numSecuriteSociale,
+    adresse,
+    situation_famille,
+    taille,
+    poids,
+    tabac_fume,
+    tabac_fume_nombre,
+    tabac_chique,
+    tabac_chique_nombre,
+    tabac_pris,
+    tabac_pris_nombre,
+    age_pris,
+    ancien_fume,
+    periode_exposition,
+    alcool,
+    medicaments,
+    affectionsCongenitales,
+    maladiesGenerales,
+    interventionsChirurgicales,
+    reactionsAllergiques,
+    notes,
+    nom,
+    prenom,
+    num_tel,
+    date_naissance,
+    statut
+  } = req.body;
   try {
     const utilisateur = await findUserByEmail(email);
     if (!utilisateur) {
@@ -110,12 +139,36 @@ exports.createMedicalRecord = async (req, res) => {
     }
 
     const newDossier = await DossierMedical.create({
+      date_creation,
+      groupeSanguin,
+      numSecuriteSociale,
+      adresse,
+      situation_famille,
+      taille,
+      poids,
+      tabac_fume,
+      tabac_fume_nombre,
+      tabac_chique,
+      tabac_chique_nombre,
+      tabac_pris,
+      tabac_pris_nombre,
+      age_pris,
+      ancien_fume,
+      periode_exposition,
+      alcool,
+      medicaments,
+      affectionsCongenitales,
+      maladiesGenerales,
+      interventionsChirurgicales,
+      reactionsAllergiques,
+      notes,
       utilisateur_id,
-      nom: patient.nom,
-      prenom: patient.prenom,
-      num_tel: patient.num_tel,
-      date_naissance: patient.date_naissance,
+      nom,
+      prenom,
+      num_tel,
+      date_naissance,
       statut
+    
     });
 
     res.status(201).json({
