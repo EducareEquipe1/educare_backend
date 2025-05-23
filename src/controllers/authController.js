@@ -3,12 +3,103 @@ const jwt = require("jsonwebtoken");
 const Patient = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const sendEmail = require("../utils/emailService");
+const extractUsersFromText = require("../utils/pdfParser");
 const validator = require("validator");
 const BlacklistToken = require("../models/blacklistTokenModel");
+const fs = require("fs");
+const pdfParse = require("pdf-parse");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 //✅all page
 //✅modification Directeur added
+exports.bulkRegisterFromPDF = async (req, res, userType) => {
+  try {
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const data = await pdfParse(fileBuffer);
+    const lines = extractUsersFromText(data.text); // Extract text lines
+
+    const results = [];
+
+    for (const line of lines) {
+      const [
+        first_name,
+        last_name,
+        email,
+        password,
+        birth_date,
+        phone,
+        matricule,
+        categorie,
+        
+      ] = line.split(",").map((x) => x.trim());
+
+      // Basic validation
+      if (
+        !email ||
+        !last_name ||
+        !first_name ||
+        !password ||
+        !birth_date ||
+        !phone ||
+        !matricule ||
+        !categorie
+      ) {
+        results.push({ email, status: "failed", error: "Missing fields" });
+        continue;
+      }
+
+      // Check existing
+      const exists = await Patient.findUserByEmail(email);
+      const archived = await Patient.findUserByEmailArchived(email);
+
+      if (archived || exists) {
+        results.push({
+          email,
+          status: "failed",
+          error: "User already exists (main or archived)",
+        });
+        continue;
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      try {
+        const newPatient = await Patient.createPatientVerified(
+          {
+            prenom: first_name,
+            nom: last_name,
+            email,
+            password: hashedPassword,
+            date_naissance: birth_date,
+            num_tel: phone,
+            matricule,
+            categorie,
+          },
+          userType
+        );
+
+        results.push({
+          email,
+          status: "success",
+          patientId: newPatient.patientId,
+        });
+      } catch (err) {
+        results.push({ email, status: "failed", error: err.message });
+      }
+    }
+
+    // Clean up file
+    fs.unlinkSync(req.file.path);
+
+    res.status(200).json({
+      message: "Bulk registration completed",
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 exports.register = asyncHandler(async (req, res, userType) => {
   const {
     first_name,

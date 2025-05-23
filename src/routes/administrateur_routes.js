@@ -1,5 +1,7 @@
 const express = require("express");
-const { register, login } = require("../controllers/authController");
+const multer = require("multer");
+const { register } = require("../controllers/authController");
+const { bulkRegisterFromPDF } = require("../controllers/authController");
 
 // ✅ Import from the correct controller file
 const {
@@ -26,7 +28,11 @@ const {
 } = require("../controllers/editUsersController");
 const { searchUsers } = require("../controllers/searchControllers");
 
+const upload = multer({ dest: "uploads/" });
 
+router.post("/bulk-register-pdf", upload.single("file"), (req, res) =>
+  bulkRegisterFromPDF(req, res, "Patient")
+);
 router.post("/register", (req, res) => register(req, res, "Admin"));
 router.get(
   "/get-active-patients",
@@ -78,11 +84,6 @@ router.get(
 );
 
 router.get("/get-users", authMiddleware, adminMiddleware, getUtilisateurs);
-router.get(
-  "/search-patient",
-  authMiddleware,
-  adminMiddleware,
-  searchUsers
-);
+router.get("/search-patient", authMiddleware, adminMiddleware, searchUsers);
 
 module.exports = router; // ✅ Make sure you're exporting the router correctly

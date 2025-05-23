@@ -192,6 +192,51 @@ exports.createPatient = (patientData, userType) => {
     });
   });
 };
+exports.createPatientVerified = (patientData) => {
+  return new Promise((resolve, reject) => {
+    connection.beginTransaction((err) => {
+      if (err) return reject(err);
+
+      const userSql = `
+        INSERT INTO Utilisateur (email, password, verified)
+        VALUES (?, ?, true); -- auto-verified
+      `;
+      const userValues = [patientData.email, patientData.password];
+
+      connection.query(userSql, userValues, (err, userResult) => {
+        if (err) return connection.rollback(() => reject(err));
+
+        const utilisateurId = userResult.insertId;
+
+        const patientSql = `
+          INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie)
+          VALUES (?, ?, ?, ?, ?, ?, ?);
+        `;
+        const patientValues = [
+          utilisateurId,
+          patientData.matricule,
+          patientData.nom,
+          patientData.prenom,
+          patientData.date_naissance,
+          patientData.num_tel,
+          patientData.categorie,
+        ];
+
+        connection.query(patientSql, patientValues, (err, patientResult) => {
+          if (err) return connection.rollback(() => reject(err));
+
+          connection.commit((err) => {
+            if (err) return connection.rollback(() => reject(err));
+            resolve({
+              utilisateurId,
+              patientId: patientResult.insertId,
+            });
+          });
+        });
+      });
+    });
+  });
+};
 
 exports.getUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
