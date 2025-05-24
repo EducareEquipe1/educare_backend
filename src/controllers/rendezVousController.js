@@ -714,7 +714,6 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const fileBuffer = fs.readFileSync(req.file.path);
     const data = await pdfParse(fileBuffer);
     const lines = extractUsersFromText(data.text);
-console.log("Body:", req.body);
 
     const { startDate, interval } = req.body;
 
@@ -730,7 +729,7 @@ console.log("Body:", req.body);
 
     for (const line of lines) {
       const parts = line.split(",").map(x => x.trim());
-      const matricule = parts[6];
+      const matricule = parts[6]; // 7ᵉ champ = matricule
 
       if (!matricule) {
         results.push({ matricule: null, status: "failed", error: "Matricule manquant" });
@@ -744,26 +743,44 @@ console.log("Body:", req.body);
         continue;
       }
 
-      // SAUTER PAUSE DE MIDI
-      const currentHour = dateCursor.getHours();
-      if (currentHour >= 12 && currentHour < 14) {
-        dateCursor.setHours(14, 0, 0, 0); // sauter à 14h
-      }
-
-      // PASSER AU JOUR SUIVANT SI > 16H
-      if (currentHour >= 16) {
+      // ⛔ Sauter les samedis/vendredi
+      while ([5, 6].includes(dateCursor.getDay())) 
+ {
         dateCursor.setDate(dateCursor.getDate() + 1);
         dateCursor.setHours(8, 0, 0, 0);
       }
 
+      // ⏳ Sauter la pause de midi
+      const hour = dateCursor.getHours();
+      if (hour >= 12 && hour < 14) {
+        dateCursor.setHours(14, 0, 0, 0);
+      }
+
+      // ⏭ Passer au jour suivant si après 16h
+      if (hour >= 16) {
+        dateCursor.setDate(dateCursor.getDate() + 1);
+        dateCursor.setHours(8, 0, 0, 0);
+        continue; // relancer avec le prochain étudiant
+      }
+
+      // 📆 Extraire date et heure au format SQL
+      const fullDate = new Date(dateCursor);
+      const dateSQL = fullDate.toISOString().split("T")[0]; // YYYY-MM-DD
+      const heureSQL = fullDate.toTimeString().split(":").slice(0, 2).join(":"); // HH:mm
+
       try {
-        await RendezVous.create({
-          id_patient: patient.patientId,
-          date_heure: new Date(dateCursor),
-          statut: "programmé",
+        await db.execute(
+          `INSERT INTO rendezVous (id_patient, date, heure, statut) VALUES (?, ?, ?, ?)`,
+          [patient.id, dateSQL, heureSQL, "programmé"]
+        );
+
+        results.push({
+          matricule,
+          status: "success",
+          date: dateSQL,
+          heure: heureSQL,
         });
 
-        results.push({ matricule, status: "success", date_heure: new Date(dateCursor) });
         dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
       } catch (err) {
         results.push({ matricule, status: "failed", error: err.message });
@@ -780,3 +797,4 @@ console.log("Body:", req.body);
     res.status(500).json({ error: error.message });
   }
 };
+
