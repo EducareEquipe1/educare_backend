@@ -102,7 +102,7 @@ const uploadImage = async (req, res) => {
 
 const getPatientPhoto = async (req, res) => {
   try {
-    const email = req.params.email.trim(); // Trim whitespace
+    const email = req.params.email.trim();
 
     connection.query(
       `SELECT Patient.photo 
@@ -111,27 +111,45 @@ const getPatientPhoto = async (req, res) => {
        WHERE Utilisateur.email = ?`,
       [email],
       (err, results) => {
-        console.log("DB results:", results); // Log DB results
         if (err) {
           return res
             .status(500)
-            .json({ error: "Could not fetch image", details: err.message });
+            .json({
+              success: false,
+              message: "Could not fetch image",
+              details: err.message,
+            });
         }
         if (!results || results.length === 0) {
           return res
             .status(404)
-            .json({ image: null, message: "No patient found with this email" });
+            .json({
+              success: false,
+              image: null,
+              message: "No patient found with this email",
+            });
         }
         if (!results[0].photo) {
-          return res.status(200).json({ image: null });
+          return res
+            .status(200)
+            .json({
+              success: false,
+              image: null,
+              message: "No photo found for this patient",
+            });
         }
-        return res.status(200).json({ image: results[0].photo });
+        // Photo exists, return it!
+        return res.status(200).json({ success: true, image: results[0].photo });
       }
     );
   } catch (err) {
     res
       .status(500)
-      .json({ error: "Could not fetch image", details: err.message });
+      .json({
+        success: false,
+        message: "Could not fetch image",
+        details: err.message,
+      });
   }
 };
 
