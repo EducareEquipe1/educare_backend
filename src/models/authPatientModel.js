@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const util = require("util");
 //✅all page
 //✅directeur modifications added
+
 exports.findUserByEmail = async (email) => {
   return new Promise((resolve, reject) => {
     const sql = "SELECT * FROM Utilisateur WHERE email = ?";
