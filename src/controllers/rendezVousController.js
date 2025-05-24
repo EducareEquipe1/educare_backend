@@ -768,44 +768,41 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const { startDate, interval } = req.body;
 
     if (!startDate || !interval) {
-      return res
-        .status(400)
-        .json({ error: "startDate et interval sont requis" });
+      return res.status(400).json({ error: "startDate et interval sont requis" });
     }
 
     let dateCursor = new Date(startDate);
     const intervalMinutes = parseInt(interval);
-    dateCursor.setHours(8, 0, 0, 0); // Commencer à 8h00
+    dateCursor.setHours(8, 0, 0, 0);
 
     const results = [];
 
     for (const line of lines) {
       const parts = line.split(",").map(x => x.trim());
-      const matricule = parts[6]; // 7ᵉ champ = matricule
+      const email = parts[2]; // email est le 3ᵉ champ (index 2)
 
-      if (!matricule) {
+      if (!email) {
         results.push({
-          matricule: null,
+          email: null,
           status: "failed",
-          error: "Matricule manquant",
+          error: "Email manquant",
         });
         continue;
       }
 
-      const patient = await Patient.findByMatricule(matricule);
+      const patient = await Patient.findPatientByEmail(email);
 
       if (!patient) {
         results.push({
-          matricule,
+          email,
           status: "failed",
           error: "Patient introuvable",
         });
         continue;
       }
 
-      // ⛔ Sauter les samedis/vendredi
-      while ([5, 6].includes(dateCursor.getDay())) 
- {
+      // ⛔ Sauter vendredi (5) et samedi (6)
+      while ([5, 6].includes(dateCursor.getDay())) {
         dateCursor.setDate(dateCursor.getDate() + 1);
         dateCursor.setHours(8, 0, 0, 0);
       }
@@ -820,30 +817,32 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
       if (hour >= 16) {
         dateCursor.setDate(dateCursor.getDate() + 1);
         dateCursor.setHours(8, 0, 0, 0);
-        continue; // relancer avec le prochain étudiant
+        continue;
       }
 
-      // 📆 Extraire date et heure au format SQL
       const fullDate = new Date(dateCursor);
-      const dateSQL = fullDate.toISOString().split("T")[0]; // YYYY-MM-DD
-      const heureSQL = fullDate.toTimeString().split(":").slice(0, 2).join(":"); // HH:mm
+      const dateSQL = fullDate.toISOString().split("T")[0];
+      const heureSQL = fullDate.toTimeString().split(":").slice(0, 2).join(":");
+
+      const motif = "contrôle médical"; // ✅ Motif fixe
 
       try {
         await db.execute(
-          `INSERT INTO rendezVous (id_patient, date, heure, statut) VALUES (?, ?, ?, ?)`,
-          [patient.id, dateSQL, heureSQL, "programmé"]
+          `INSERT INTO rendezVous (id_patient, date, heure, statut, email, motif) VALUES (?, ?, ?, ?, ?, ?)`,
+          [patient.id, dateSQL, heureSQL, "programmé", email, motif]
         );
 
         results.push({
-          matricule,
+          email,
           status: "success",
           date: dateSQL,
           heure: heureSQL,
+          motif,
         });
 
         dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
       } catch (err) {
-        results.push({ matricule, status: "failed", error: err.message });
+        results.push({ email, status: "failed", error: err.message });
       }
     }
 
@@ -857,4 +856,3 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-

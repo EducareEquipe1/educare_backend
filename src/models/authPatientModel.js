@@ -583,6 +583,7 @@ exports.getUserRoleByEmail = async (email) => {
     });
   });
 };
+/*
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
@@ -645,3 +646,4 @@ Patient.findByMatricule = async function(matricule) {
 };
 
 module.exports = Patient;
+*/
