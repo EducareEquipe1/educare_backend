@@ -38,6 +38,7 @@ exports.getUtilisateur = async (req, res) => {
   try {
     let rawUser = null;
 
+    // Try to find active user
     const result = await Patient.findUserByEmail(email);
 
     if (result) {
@@ -49,11 +50,12 @@ exports.getUtilisateur = async (req, res) => {
         result.photo = patient.photo;
         result.nom = patient.nom;
         result.prenom = patient.prenom;
-      } else {
+        result.date_naissance = patient.date_naissance;
       }
 
       rawUser = result;
     } else {
+      // Try to find archived user
       const archived = await Patient.findUserByEmailArchived(email);
       if (archived) {
         archived.isActif = false;
@@ -66,6 +68,7 @@ exports.getUtilisateur = async (req, res) => {
           archived.photo = patient.photo;
           archived.nom = patient.nom;
           archived.prenom = patient.prenom;
+          archived.date_naissance = patient.date_naissance;
         } else {
           const directeur = await Patient.findDirecteurByUtilisateurIdArchived(
             userId
@@ -74,6 +77,7 @@ exports.getUtilisateur = async (req, res) => {
             archived.photo = directeur.photo;
             archived.nom = directeur.nom;
             archived.prenom = directeur.prenom;
+            archived.date_naissance = directeur.date_naissance;
           }
         }
 
@@ -81,7 +85,6 @@ exports.getUtilisateur = async (req, res) => {
       }
     }
 
-    // If user was found, send only selected fields
     if (rawUser) {
       const utilisateur = {
         id: rawUser.id,
@@ -90,6 +93,9 @@ exports.getUtilisateur = async (req, res) => {
         nom: rawUser.nom,
         prenom: rawUser.prenom,
         photo: rawUser.photo,
+        date_naissance: rawUser.date_naissance
+          ? new Date(rawUser.date_naissance).toISOString().split("T")[0] // → "YYYY-MM-DD"
+          : null,
       };
 
       res.status(200).json({ utilisateur });
