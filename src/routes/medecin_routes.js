@@ -104,7 +104,6 @@ router.get(
   getMedicalRecord
 );
 
-
 // ✅ modified to be compatible with new directeur strecture
 router.get(
   "/get-utilisateur/:email",
@@ -154,7 +153,7 @@ router.post(
   createOrdonnanceController
 );
 router.post(
-  "/add-medicament/:id_ordonnace/:id_medicament",
+  "/add-medicament/:id_ordonnance/:id_medicament",
   authMiddleware,
   doctorMiddleware,
   addMedicamentsToOrdonnance
@@ -185,14 +184,12 @@ router.delete(
   deleteConsultationController
 );
 
-
 //programmer un rendezvous demandé par le patient
 router.put(
   "/programmerdv/:id_rdv",
   authMiddleware,
   doctorMiddleware,
   programmerRendezVous
-
 );
 //programmer rendez vous par medecin quand il le programme apres la consultation de listes patient
 router.post(
@@ -211,13 +208,12 @@ router.post(
 );
 
 //modifier un rendezvous
-router.patch("/modifierrdv/:id_rendezVous",
+router.patch(
+  "/modifierrdv/:id_rendezVous",
   authMiddleware,
   doctorMiddleware,
   modifierRendezVous
 );
-
-
 
 //annuler un rendez vous
 router.put(
@@ -228,28 +224,26 @@ router.put(
 );
 //annuler un rendez
 
-
-  //annuler un rendez vous
-  router.put("/annulerdv/:id_rdv",
-    authMiddleware,
-    doctorMiddleware, 
-    annulerRendezVous);
-    
+//annuler un rendez vous
+router.put(
+  "/annulerdv/:id_rdv",
+  authMiddleware,
+  doctorMiddleware,
+  annulerRendezVous
+);
 
 //refuser un rendez vous
 router.put(
   "/refuserdv/:id_rdv",
   authMiddleware,
-  doctorMiddleware, 
-  refuserRendezVous);
+  doctorMiddleware,
+  refuserRendezVous
+);
 
-  
-   // get liste des rendez vous
-    router.get('/listedesrendezvous',
-    listeRendezVous);
-    // gte liste des demandes
-router.get('/listedesdemandes',
-  listeRendezVousDemandes);
+// get liste des rendez vous
+router.get("/listedesrendezvous", listeRendezVous);
+// gte liste des demandes
+router.get("/listedesdemandes", listeRendezVousDemandes);
 //liste rendezvous dun seul patient
 router.get("/listerendezvousdupatient/:email", getRendezVousByPatientEmail);
 
@@ -264,7 +258,5 @@ router.post(
   upload.single("file"),
   bulkScheduleAppointmentsFromPDF
 );
-
-
 
 module.exports = router;

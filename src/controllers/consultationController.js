@@ -10,7 +10,7 @@ const {
   getConsultationsByPatientId,
   ModifyConsultation,
   createOrdonnance,
-  addMedicaments,
+  addMedicamentsToOrdonnance,
   getMedicamentsByOrdonnance,
   deleteOrdonnance,
   deleteConsultation,
@@ -264,13 +264,13 @@ exports.getConsultationsbyIdController = async (req, res) => {
 exports.addMedicamentsToOrdonnance = async (req, res) => {
   const { id_ordonnance, id_medicament } = req.params; // from URL params
   const { duree } = req.body; // from request body
-
+  console.log({ id_ordonnance, id_medicament });
   if (!id_ordonnance || !id_medicament || !duree) {
     return res.status(400).json({ error: "All fields are required." });
   }
 
   try {
-    const result = await addMedicaments({
+    const result = await addMedicamentsToOrdonnance({
       id_ordonnance,
       medicament_id: id_medicament,
       duree,
