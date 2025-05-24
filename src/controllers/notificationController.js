@@ -37,9 +37,11 @@ exports.markAsRead = (req, res) => {
 // Create a new notification
 exports.createNotification = (req, res) => {
   const { user_email, title, content, type } = req.body;
+  const allowedTypes = ["accepted", "refused", "scheduled", "other"];
+  const safeType = allowedTypes.includes(type) ? type : "other";
   db.query(
     "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
-    [user_email, title, content, type || "other"],
+    [user_email, title, content, safeType],
     (err, result) => {
       if (err) {
         return res

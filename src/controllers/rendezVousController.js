@@ -206,7 +206,7 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
         email, // email du patient
         "Nouveau rendez-vous",
         `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé par le médecin.`,
-        "appointment",
+        "scheduled", // <-- use allowed value
       ]
     );
 
@@ -280,7 +280,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
         email, // email du patient
         "Nouveau rendez-vous",
         `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé.`,
-        "appointment",
+        "scheduled",
       ]
     );
 
@@ -392,17 +392,14 @@ exports.annulerRendezVous = async (req, res) => {
 
     // Notify patient
     if (patientEmail) {
-      await db.execute(
-        "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
-        [
-          patientEmail,
-          "Rendez-vous annulé",
-          `Votre rendez-vous du ${date ?? ""} à ${
-            heure ?? ""
-          } a été annulé par le médecin.`,
-          "appointment",
-        ]
-      );
+      await notifyUser({
+        user_email: patientEmail,
+        title: "Rendez-vous annulé",
+        content: `Votre rendez-vous du ${date ?? ""} à ${
+          heure ?? ""
+        } a été annulé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
     }
 
     res.status(200).json({ message: "Rendez-vous annulé" });
@@ -520,6 +517,26 @@ exports.refuserRendezVous = async (req, res) => {
       "UPDATE rendezVous SET statut = 'refusé' WHERE id_rendezVous = ?",
       [id_rdv]
     );
+
+    // Get patient info for notification
+    const [infoRows] = await db.execute(
+      `SELECT u.email, r.date, r.heure
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE r.id_rendezVous = ?`,
+      [id_rdv]
+    );
+    if (infoRows.length > 0) {
+      await notifyUser({
+        user_email: infoRows[0].email,
+        title: "Rendez-vous refusé",
+        content: `Votre rendez-vous du ${infoRows[0].date ?? ""} à ${
+          infoRows[0].heure ?? ""
+        } a été refusé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
+    }
 
     res.status(200).json({ message: "Rendez-vous refusé" });
   } catch (error) {
@@ -747,7 +764,6 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const fileBuffer = fs.readFileSync(req.file.path);
     const data = await pdfParse(fileBuffer);
     const lines = extractUsersFromText(data.text);
-    console.log("Body:", req.body);
 
     const { startDate, interval } = req.body;
 
@@ -764,8 +780,8 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const results = [];
 
     for (const line of lines) {
-      const parts = line.split(",").map((x) => x.trim());
-      const matricule = parts[6];
+      const parts = line.split(",").map(x => x.trim());
+      const matricule = parts[6]; // 7ᵉ champ = matricule
 
       if (!matricule) {
         results.push({
@@ -787,30 +803,44 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
         continue;
       }
 
-      // SAUTER PAUSE DE MIDI
-      const currentHour = dateCursor.getHours();
-      if (currentHour >= 12 && currentHour < 14) {
-        dateCursor.setHours(14, 0, 0, 0); // sauter à 14h
-      }
-
-      // PASSER AU JOUR SUIVANT SI > 16H
-      if (currentHour >= 16) {
+      // ⛔ Sauter les samedis/vendredi
+      while ([5, 6].includes(dateCursor.getDay())) 
+ {
         dateCursor.setDate(dateCursor.getDate() + 1);
         dateCursor.setHours(8, 0, 0, 0);
       }
 
+      // ⏳ Sauter la pause de midi
+      const hour = dateCursor.getHours();
+      if (hour >= 12 && hour < 14) {
+        dateCursor.setHours(14, 0, 0, 0);
+      }
+
+      // ⏭ Passer au jour suivant si après 16h
+      if (hour >= 16) {
+        dateCursor.setDate(dateCursor.getDate() + 1);
+        dateCursor.setHours(8, 0, 0, 0);
+        continue; // relancer avec le prochain étudiant
+      }
+
+      // 📆 Extraire date et heure au format SQL
+      const fullDate = new Date(dateCursor);
+      const dateSQL = fullDate.toISOString().split("T")[0]; // YYYY-MM-DD
+      const heureSQL = fullDate.toTimeString().split(":").slice(0, 2).join(":"); // HH:mm
+
       try {
-        await RendezVous.create({
-          id_patient: patient.patientId,
-          date_heure: new Date(dateCursor),
-          statut: "programmé",
-        });
+        await db.execute(
+          `INSERT INTO rendezVous (id_patient, date, heure, statut) VALUES (?, ?, ?, ?)`,
+          [patient.id, dateSQL, heureSQL, "programmé"]
+        );
 
         results.push({
           matricule,
           status: "success",
-          date_heure: new Date(dateCursor),
+          date: dateSQL,
+          heure: heureSQL,
         });
+
         dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
       } catch (err) {
         results.push({ matricule, status: "failed", error: err.message });
@@ -827,3 +857,4 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+

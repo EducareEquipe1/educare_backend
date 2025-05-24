@@ -584,3 +584,65 @@ exports.getUserRoleByEmail = async (email) => {
     });
   });
 };
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
+
+// Déclaration du modèle Patient
+const Patient = sequelize.define("Patient", {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  utilisateur_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  categorie: {
+    type: DataTypes.ENUM("Etudiant", "ATS", "Enseignant", "Directeur"),
+    allowNull: false,
+  },
+  matricule: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  nom: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+  },
+  prenom: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+  },
+  num_tel: {
+    type: DataTypes.STRING(10),
+    allowNull: false,
+  },
+  date_naissance: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+  },
+  photo: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+}, {
+  tableName: "Patient",
+  timestamps: false,
+});
+
+
+// ✅ Ajout de la méthode findByMatricule (avec query SQL brut si tu n'utilises pas Sequelize pour CRUD)
+
+const db = connection.promise();
+
+Patient.findByMatricule = async function(matricule) {
+  const [rows] = await db.execute(
+    "SELECT * FROM Patient WHERE matricule = ?",
+    [matricule]
+  );
+  return rows.length > 0 ? rows[0] : null;
+};
+
+module.exports = Patient;

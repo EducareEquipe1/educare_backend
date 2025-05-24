@@ -23,6 +23,8 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 
 // Use routes
 app.use("/patients", patientRoutes);
@@ -62,7 +64,7 @@ app.get("/api/cloudinary-health", (req, res) => {
       });
     });
 });
-app.use(express.urlencoded({ extended: true }));
+
 
 
 require("./tasks/cleanupTokens");
