@@ -52,3 +52,5 @@ app.listen(PORT, () => {
   console.log(`\n[APP] Server running on http://localhost:${PORT}`);
   console.log("[APP] Environment:", process.env.NODE_ENV || "development");
 });
+ 
+app.use(express.urlencoded({ extended: true }));

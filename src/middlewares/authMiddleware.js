@@ -69,4 +69,12 @@ const doctorMiddleware = asyncHandler(async (req, res, next) => {
   );
 });
 
-module.exports = { authMiddleware, adminMiddleware, doctorMiddleware };
+// Patient-only middleware (just checks token, not role)
+const patientAuth = authMiddleware; // Alias for clarity
+
+module.exports = {
+  authMiddleware,
+  adminMiddleware,
+  doctorMiddleware,
+  patientAuth,
+};

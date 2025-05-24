@@ -1,5 +1,7 @@
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
+const upload = multer({ dest: "uploads/" });
 const { register } = require("../controllers/authController");
 const {
   authMiddleware,
@@ -38,6 +40,7 @@ const {
   getConsultation,
   listeRendezVousDemandes,
   listeRendezVous,
+  bulkScheduleAppointmentsFromPDF,
 } = require("../controllers/rendezVousController");
 
 const {
@@ -255,5 +258,13 @@ router.get(
   "/listedemandesdupatient/:email",
   getDemandesRendezVousByPatientEmail
 );
+
+router.post(
+  "/bulk-schedule",
+  upload.single("file"),
+  bulkScheduleAppointmentsFromPDF
+);
+
+
 
 module.exports = router;
