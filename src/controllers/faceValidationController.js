@@ -19,7 +19,7 @@ const upload = multer({
     }
     cb(null, true);
   },
-}).single("image");
+}).any(); // <-- change from .single('image') to .any()
 
 const uploadMiddleware = (req, res, next) => {
   upload(req, res, function (err) {
@@ -44,7 +44,10 @@ const uploadMiddleware = (req, res, next) => {
 const uploadImage = async (req, res) => {
   try {
     const email = req.body.email;
-    if (!req.file) {
+    const file = req.file || (req.files && req.files[0]);
+    console.log("Email:", email);
+    console.log("File:", file);
+    if (!file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
@@ -69,7 +72,7 @@ const uploadImage = async (req, res) => {
       });
     };
 
-    const result = await streamUpload(req.file.buffer);
+    const result = await streamUpload(file.buffer);
 
     // Save the image URL to the user's profile in your DB (use 'photo' column)
     connection.query(
@@ -112,44 +115,36 @@ const getPatientPhoto = async (req, res) => {
       [email],
       (err, results) => {
         if (err) {
-          return res
-            .status(500)
-            .json({
-              success: false,
-              message: "Could not fetch image",
-              details: err.message,
-            });
+          return res.status(500).json({
+            success: false,
+            message: "Could not fetch image",
+            details: err.message,
+          });
         }
         if (!results || results.length === 0) {
-          return res
-            .status(404)
-            .json({
-              success: false,
-              image: null,
-              message: "No patient found with this email",
-            });
+          return res.status(404).json({
+            success: false,
+            image: null,
+            message: "No patient found with this email",
+          });
         }
         if (!results[0].photo) {
-          return res
-            .status(200)
-            .json({
-              success: false,
-              image: null,
-              message: "No photo found for this patient",
-            });
+          return res.status(200).json({
+            success: false,
+            image: null,
+            message: "No photo found for this patient",
+          });
         }
         // Photo exists, return it!
         return res.status(200).json({ success: true, image: results[0].photo });
       }
     );
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Could not fetch image",
-        details: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Could not fetch image",
+      details: err.message,
+    });
   }
 };
 
