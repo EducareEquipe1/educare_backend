@@ -3,7 +3,6 @@ const { findUserByEmail } = require("../models/authPatientModel");
 const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
 
-
 /**
  * GET - Récupérer les infos de base de l'utilisateur (nom, prenom, etc.)
  */
@@ -52,12 +51,13 @@ console.log("[getUserMedicalInfo] directeurData :", directeurData);
       num_tel: patient.num_tel,
       date_naissance: patient.date_naissance,
       statut,
-      email: utilisateur.email,      
-      
+      email: utilisateur.email,
     });
-
   } catch (error) {
-    console.error("Erreur lors de la récupération des infos utilisateur:", error);
+    console.error(
+      "Erreur lors de la récupération des infos utilisateur:",
+      error
+    );
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
@@ -69,7 +69,6 @@ exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
   console.log("[createMedicalRecord] req.body :", req.body);
   const {
-    
     groupeSanguin,
     numSecuriteSociale,
     adresse,
@@ -96,7 +95,7 @@ exports.createMedicalRecord = async (req, res) => {
     prenom,
     num_tel,
     date_naissance,
-    statut
+    statut,
   } = req.body;
 
 
@@ -115,7 +114,9 @@ exports.createMedicalRecord = async (req, res) => {
     const utilisateur = await findUserByEmail(email);
     console.log("[createMedicalRecord] utilisateur :", utilisateur);
     if (!utilisateur) {
-      return res.status(404).json({ message: "Utilisateur non trouvé avec cet email" });
+      return res
+        .status(404)
+        .json({ message: "Utilisateur non trouvé avec cet email" });
     }
 
     const utilisateur_id = utilisateur.id;
@@ -129,7 +130,9 @@ exports.createMedicalRecord = async (req, res) => {
     );
 console.log("[createMedicalRecord] patientData :", patientData);
     if (patientData.length === 0) {
-      return res.status(404).json({ message: "Patient non trouvé pour cet utilisateur" });
+      return res
+        .status(404)
+        .json({ message: "Patient non trouvé pour cet utilisateur" });
     }
 
     const patient = patientData[0];
@@ -141,8 +144,14 @@ console.log("[createMedicalRecord] patientData :", patientData);
         type: db.QueryTypes.SELECT,
       }
     );
+<<<<<<< Updated upstream
 console.log("[createMedicalRecord] directeurData :", directeurData);
     const statutFinal = directeurData.length > 0 ? "directeur" : patient.categorie;
+=======
+
+    const statutFinal =
+      directeurData.length > 0 ? "directeur" : patient.categorie;
+>>>>>>> Stashed changes
 
     const [existingDossier] = await db.query(
       "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
@@ -153,7 +162,9 @@ console.log("[createMedicalRecord] directeurData :", directeurData);
     );
 
     if (existingDossier) {
-      return res.status(400).json({ message: "Un dossier médical existe déjà pour cet utilisateur" });
+      return res.status(400).json({
+        message: "Un dossier médical existe déjà pour cet utilisateur",
+      });
     }
 
     // Convertir les champs string oui/non en booléens
@@ -192,19 +203,21 @@ console.log("[createMedicalRecord] directeurData :", directeurData);
       prenom,
       num_tel,
       date_naissance,
-      statut: statutFinal
+      statut: statutFinal,
     });
 
     res.status(201).json({
-      message: "Dossier médical créé avec succès (informations de base uniquement)",
-      dossier: newDossier
+      message:
+        "Dossier médical créé avec succès (informations de base uniquement)",
+      dossier: newDossier,
     });
   } catch (error) {
     console.error("Erreur lors de la création du dossier médical:", error);
-    res.status(500).json({ message: "Erreur serveur lors de la création du dossier médical" });
+    res.status(500).json({
+      message: "Erreur serveur lors de la création du dossier médical",
+    });
   }
 };
-
 
 /**
  * GET - Récupérer un dossier médical complet par email
@@ -233,7 +246,9 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
     res.status(200).json(dossier);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Erreur lors de la récupération du dossier médical" });
+    res
+      .status(500)
+      .json({ message: "Erreur lors de la récupération du dossier médical" });
   }
 });
 
@@ -265,10 +280,44 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
 
     res.status(200).json({
       message: "Dossier médical mis à jour avec succès",
-      dossier
+      dossier,
     });
   } catch (error) {
     console.error("Erreur lors de la mise à jour du dossier médical:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+
+exports.getDossierMedicalByPatient = async (req, res) => {
+  const { email } = req.params;
+  const tokenEmail = req.user?.email;
+
+  // Only allow access if the token's email matches the requested email
+  if (!tokenEmail || tokenEmail !== email) {
+    return res.status(403).json({ message: "Accès refusé" });
+  }
+
+  try {
+    const rows = await db.query(
+      `SELECT dm.* 
+       FROM Dossier_Medical dm
+       INNER JOIN Utilisateur u ON dm.utilisateur_id = u.id
+       WHERE u.email = ?`,
+      {
+        replacements: [email],
+        type: db.QueryTypes.SELECT,
+      }
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Dossier médical non trouvé" });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération du dossier médical du patient:",
+      error
+    );
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
