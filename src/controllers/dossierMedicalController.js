@@ -144,14 +144,14 @@ console.log("[createMedicalRecord] patientData :", patientData);
         type: db.QueryTypes.SELECT,
       }
     );
-<<<<<<< Updated upstream
+
 console.log("[createMedicalRecord] directeurData :", directeurData);
     const statutFinal = directeurData.length > 0 ? "directeur" : patient.categorie;
-=======
 
-    const statutFinal =
+
+   
       directeurData.length > 0 ? "directeur" : patient.categorie;
->>>>>>> Stashed changes
+ 
 
     const [existingDossier] = await db.query(
       "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
