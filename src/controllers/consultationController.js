@@ -10,7 +10,7 @@ const {
   getConsultationsByPatientId,
   ModifyConsultation,
   createOrdonnance,
-  addMedicaments,
+  addMedicamentsToOrdonnance,
   getMedicamentsByOrdonnance,
   deleteOrdonnance,
   deleteConsultation,
@@ -192,10 +192,11 @@ exports.modifyConsultation = async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("Error modifying consultation:", error);
-    return res.status(500).json({ message: "Server error while updating consultation" });
+    return res
+      .status(500)
+      .json({ message: "Server error while updating consultation" });
   }
 };
-
 
 exports.createOrdonnanceController = async (req, res) => {
   const { consultation_id } = req.params;
@@ -261,14 +262,19 @@ exports.getConsultationsbyIdController = async (req, res) => {
   }
 };
 exports.addMedicamentsToOrdonnance = async (req, res) => {
-  const { id_ordonnance, medicament_id, duree } = req.body;
-
-  if (!id_ordonnance || !medicament_id || !duree) {
+  const { id_ordonnance, id_medicament } = req.params; // from URL params
+  const { duree } = req.body; // from request body
+  console.log({ id_ordonnance, id_medicament });
+  if (!id_ordonnance || !id_medicament || !duree) {
     return res.status(400).json({ error: "All fields are required." });
   }
 
   try {
-    const result = await addMedicaments({ id_ordonnance, medicament_id, duree });
+    const result = await addMedicamentsToOrdonnance({
+      id_ordonnance,
+      medicament_id: id_medicament,
+      duree,
+    });
     res.status(201).json(result);
   } catch (error) {
     console.error("❌ Error:", error);

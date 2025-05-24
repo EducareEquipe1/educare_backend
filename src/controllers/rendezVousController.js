@@ -2,7 +2,6 @@
 const Demande = require("../models/demandeModel");
 const RendezVous = require("../models/rendezVousModel");
 const connection = require("../db");
-
 const db = connection.promise();
 const { doctorMiddleware } = require("../middlewares/authMiddleware");
 
@@ -66,11 +65,9 @@ exports.demanderRendezVous = async (req, res) => {
     res.status(201).json({ message: "Rendez-vous demandé", id_rdv });
   } catch (error) {
     console.error("Erreur lors de la demande de rendez-vous:", error);
-    res
-      .status(500)
-      .json({
-        error: `Erreur lors de la demande de rendez-vous: ${error.message}`,
-      });
+    res.status(500).json({
+      error: `Erreur lors de la demande de rendez-vous: ${error.message}`,
+    });
   }
 };
 
@@ -129,12 +126,9 @@ exports.programmerRendezVous = async (req, res) => {
     );
 
     if (existingRdvRows.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Un autre rendez-vous est déjà programmé à cette date et heure.",
-        });
+      return res.status(400).json({
+        error: "Un autre rendez-vous est déjà programmé à cette date et heure.",
+      });
     }
 
     // ✅ Mise à jour du rendez-vous
@@ -205,6 +199,17 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
 
     const id_rdv = result.insertId;
 
+    // Notification
+    await db.execute(
+      "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
+      [
+        email, // email du patient
+        "Nouveau rendez-vous",
+        `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé par le médecin.`,
+        "scheduled", // <-- use allowed value
+      ]
+    );
+
     res.status(201).json({
       message: "Rendez-vous programmé avec succès par le médecin.",
       id_rdv,
@@ -267,6 +272,17 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     );
 
     const id_rdv = result.insertId;
+
+    // Notification
+    await db.execute(
+      "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
+      [
+        email, // email du patient
+        "Nouveau rendez-vous",
+        `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé.`,
+        "scheduled",
+      ]
+    );
 
     res.status(201).json({
       message: "Rendez-vous programmé avec succès par le médecin.",
@@ -354,7 +370,38 @@ exports.programmerDirectementRendezVous = async (req, res) => {
 exports.annulerRendezVous = async (req, res) => {
   const { id_rdv } = req.params;
   try {
+    // Get patient email before cancelling
+    const [rows] = await db.execute(
+      `SELECT u.email, r.date, r.heure
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE r.id_rendezVous = ?`,
+      [id_rdv]
+    );
+    let patientEmail = null,
+      date = null,
+      heure = null;
+    if (rows.length > 0) {
+      patientEmail = rows[0].email;
+      date = rows[0].date;
+      heure = rows[0].heure;
+    }
+
     await RendezVous.annuler(id_rdv);
+
+    // Notify patient
+    if (patientEmail) {
+      await notifyUser({
+        user_email: patientEmail,
+        title: "Rendez-vous annulé",
+        content: `Votre rendez-vous du ${date ?? ""} à ${
+          heure ?? ""
+        } a été annulé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
+    }
+
     res.status(200).json({ message: "Rendez-vous annulé" });
   } catch (error) {
     console.error("Erreur lors de l'annulation du rendez-vous:", error);
@@ -389,11 +436,9 @@ exports.modifierRendezVous = async (req, res) => {
     const rdv = rendezVousRows[0];
 
     if (rdv.statut === "annulé" || rdv.statut === "terminé") {
-      return res
-        .status(400)
-        .json({
-          error: `Impossible de modifier un rendez-vous ${rdv.statut}.`,
-        });
+      return res.status(400).json({
+        error: `Impossible de modifier un rendez-vous ${rdv.statut}.`,
+      });
     }
 
     // Préparer la mise à jour dynamique
@@ -462,12 +507,9 @@ exports.refuserRendezVous = async (req, res) => {
     }
 
     if (rdv[0].statut !== "demandé") {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Seuls les rendez-vous en statut 'demandé' peuvent être refusés",
-        });
+      return res.status(400).json({
+        error: "Seuls les rendez-vous en statut 'demandé' peuvent être refusés",
+      });
     }
 
     // Mettre à jour le statut à "refusé"
@@ -475,6 +517,26 @@ exports.refuserRendezVous = async (req, res) => {
       "UPDATE rendezVous SET statut = 'refusé' WHERE id_rendezVous = ?",
       [id_rdv]
     );
+
+    // Get patient info for notification
+    const [infoRows] = await db.execute(
+      `SELECT u.email, r.date, r.heure
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE r.id_rendezVous = ?`,
+      [id_rdv]
+    );
+    if (infoRows.length > 0) {
+      await notifyUser({
+        user_email: infoRows[0].email,
+        title: "Rendez-vous refusé",
+        content: `Votre rendez-vous du ${infoRows[0].date ?? ""} à ${
+          infoRows[0].heure ?? ""
+        } a été refusé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
+    }
 
     res.status(200).json({ message: "Rendez-vous refusé" });
   } catch (error) {
@@ -553,11 +615,9 @@ exports.listeRendezVousDemandes = async (req, res) => {
       "Erreur lors de la récupération des rendez-vous demandés:",
       error
     );
-    res
-      .status(500)
-      .json({
-        error: "Erreur lors de la récupération des rendez-vous demandés.",
-      });
+    res.status(500).json({
+      error: "Erreur lors de la récupération des rendez-vous demandés.",
+    });
   }
 };
 
@@ -583,11 +643,9 @@ exports.getRendezVousByPatientEmail = async (req, res) => {
       "Erreur lors de la récupération des rendez-vous du patient:",
       error
     );
-    res
-      .status(500)
-      .json({
-        message: "Erreur serveur lors de la récupération des rendez-vous.",
-      });
+    res.status(500).json({
+      message: "Erreur serveur lors de la récupération des rendez-vous.",
+    });
   }
 };
 
@@ -636,12 +694,10 @@ exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
       "Erreur lors de la récupération des demandes de rendez-vous du patient:",
       error
     );
-    res
-      .status(500)
-      .json({
-        message:
-          "Erreur serveur lors de la récupération des demandes de rendez-vous.",
-      });
+    res.status(500).json({
+      message:
+        "Erreur serveur lors de la récupération des demandes de rendez-vous.",
+    });
   }
 };
 
@@ -663,11 +719,9 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
     const rdv = rdvRows[0];
 
     if (rdv.statut !== "demandé") {
-      return res
-        .status(400)
-        .json({
-          error: "Seules les demandes non programmées peuvent être annulées.",
-        });
+      return res.status(400).json({
+        error: "Seules les demandes non programmées peuvent être annulées.",
+      });
     }
 
     // 2. Vérifier que le rendez-vous appartient bien au patient identifié par l'email
@@ -704,10 +758,6 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
     res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };
-  
-
-
-
 
 exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
   try {
@@ -718,7 +768,9 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const { startDate, interval } = req.body;
 
     if (!startDate || !interval) {
-      return res.status(400).json({ error: "startDate et interval sont requis" });
+      return res
+        .status(400)
+        .json({ error: "startDate et interval sont requis" });
     }
 
     let dateCursor = new Date(startDate);
@@ -732,14 +784,22 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
       const matricule = parts[6]; // 7ᵉ champ = matricule
 
       if (!matricule) {
-        results.push({ matricule: null, status: "failed", error: "Matricule manquant" });
+        results.push({
+          matricule: null,
+          status: "failed",
+          error: "Matricule manquant",
+        });
         continue;
       }
 
       const patient = await Patient.findByMatricule(matricule);
 
       if (!patient) {
-        results.push({ matricule, status: "failed", error: "Patient introuvable" });
+        results.push({
+          matricule,
+          status: "failed",
+          error: "Patient introuvable",
+        });
         continue;
       }
 
