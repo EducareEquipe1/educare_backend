@@ -26,7 +26,9 @@ const {
 } = require("../controllers/faceValidationController");
 const {
   demanderRendezVous,
-  annulerRendezVous,getRendezVousByPatientEmail,getDemandesRendezVousByPatientEmail
+  annulerRendezVous,
+  getRendezVousByPatientEmail,
+  getDemandesRendezVousByPatientEmail,
 } = require("../controllers/rendezVousController");
 
 const router = express.Router();
@@ -52,7 +54,7 @@ router.get("/profile/:email", getPatientByEmail); // Add this line
 
 // Image upload route
 router.post("/upload-id-photo", uploadMiddleware, uploadImage);
-router.get("/get-patient-photo/:id", getPatientPhoto);
+router.get("/get-patient-photo/:email", getPatientPhoto);
 
 router.post("/logout", logout);
 
@@ -63,11 +65,12 @@ router.post("/demanderdv/:email", demanderRendezVous);
 router.put("/annulerdv/:id_rdv", annulerRendezVous);
 
 //liste rendezvous dun seul patient
-router.get('/listerendezvousdupatient/:email',
-  getRendezVousByPatientEmail);
+router.get("/listerendezvousdupatient/:email", getRendezVousByPatientEmail);
 
-  //liste des demandes rendezvous dun seul patient
-router.get('/listedemandesdupatient/:email',
-  getDemandesRendezVousByPatientEmail);
+//liste des demandes rendezvous dun seul patient
+router.get(
+  "/listedemandesdupatient/:email",
+  getDemandesRendezVousByPatientEmail
+);
 
 module.exports = router;
