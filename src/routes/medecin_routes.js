@@ -151,7 +151,7 @@ router.post(
   createOrdonnanceController
 );
 router.post(
-  "/add-medicament",
+  "/add-medicament/:id_ordonnace/:id_medicament",
   authMiddleware,
   doctorMiddleware,
   addMedicamentsToOrdonnance

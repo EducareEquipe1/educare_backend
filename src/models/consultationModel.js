@@ -225,7 +225,7 @@ exports.createOrdonnance = async (data) => {
   });
 };
 
-exports.addMedicaments = async (data) => {
+exports.addMedicamentsToOrdonnance = async (data) => {
   return new Promise((resolve, reject) => {
     const checkOrdonnanceSql =
       "SELECT 1 FROM Ordonnance WHERE id_ordonnance = ?";
