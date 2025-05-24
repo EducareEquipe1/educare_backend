@@ -714,6 +714,7 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     const fileBuffer = fs.readFileSync(req.file.path);
     const data = await pdfParse(fileBuffer);
     const lines = extractUsersFromText(data.text);
+console.log("Body:", req.body);
 
     const { startDate, interval } = req.body;
 

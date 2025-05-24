@@ -62,6 +62,8 @@ app.get("/api/cloudinary-health", (req, res) => {
       });
     });
 });
+app.use(express.urlencoded({ extended: true }));
+
 
 require("./tasks/cleanupTokens");
 
