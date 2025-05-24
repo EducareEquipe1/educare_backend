@@ -206,7 +206,7 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
         email, // email du patient
         "Nouveau rendez-vous",
         `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé par le médecin.`,
-        "appointment",
+        "scheduled", // <-- use allowed value
       ]
     );
 
@@ -280,7 +280,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
         email, // email du patient
         "Nouveau rendez-vous",
         `Votre rendez-vous du ${date_rdv} à ${heure_rdv} a été programmé.`,
-        "appointment",
+        "scheduled",
       ]
     );
 
@@ -392,17 +392,14 @@ exports.annulerRendezVous = async (req, res) => {
 
     // Notify patient
     if (patientEmail) {
-      await db.execute(
-        "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
-        [
-          patientEmail,
-          "Rendez-vous annulé",
-          `Votre rendez-vous du ${date ?? ""} à ${
-            heure ?? ""
-          } a été annulé par le médecin.`,
-          "appointment",
-        ]
-      );
+      await notifyUser({
+        user_email: patientEmail,
+        title: "Rendez-vous annulé",
+        content: `Votre rendez-vous du ${date ?? ""} à ${
+          heure ?? ""
+        } a été annulé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
     }
 
     res.status(200).json({ message: "Rendez-vous annulé" });
@@ -520,6 +517,26 @@ exports.refuserRendezVous = async (req, res) => {
       "UPDATE rendezVous SET statut = 'refusé' WHERE id_rendezVous = ?",
       [id_rdv]
     );
+
+    // Get patient info for notification
+    const [infoRows] = await db.execute(
+      `SELECT u.email, r.date, r.heure
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE r.id_rendezVous = ?`,
+      [id_rdv]
+    );
+    if (infoRows.length > 0) {
+      await notifyUser({
+        user_email: infoRows[0].email,
+        title: "Rendez-vous refusé",
+        content: `Votre rendez-vous du ${infoRows[0].date ?? ""} à ${
+          infoRows[0].heure ?? ""
+        } a été refusé par le médecin.`,
+        type: "refused", // <-- use allowed value
+      });
+    }
 
     res.status(200).json({ message: "Rendez-vous refusé" });
   } catch (error) {
@@ -827,3 +844,10 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+async function notifyUser({ user_email, title, content, type = "other" }) {
+  await db.execute(
+    "INSERT INTO Notification (user_email, title, content, type) VALUES (?, ?, ?, ?)",
+    [user_email, title, content, type]
+  );
+}
