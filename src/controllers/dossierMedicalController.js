@@ -9,9 +9,10 @@ const db = require("../config/database");
  */
 exports.getUserMedicalInfo = async (req, res) => {
   const { email } = req.params;
-
+ console.log("[getUserMedicalInfo] email reçu :", email);
   try {
     const utilisateur = await findUserByEmail(email);
+    console.log("[getUserMedicalInfo] utilisateur trouvé :", utilisateur);
     if (!utilisateur) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
@@ -25,7 +26,7 @@ exports.getUserMedicalInfo = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-
+console.log("[getUserMedicalInfo] patientData :", patientData);
     if (patientData.length === 0) {
       return res.status(404).json({ message: "Patient non trouvé" });
     }
@@ -40,7 +41,7 @@ exports.getUserMedicalInfo = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-
+console.log("[getUserMedicalInfo] directeurData :", directeurData);
     if (directeurData.length > 0) {
       statut = "Directeur";
     }
@@ -61,11 +62,12 @@ exports.getUserMedicalInfo = async (req, res) => {
   }
 };
 
-/**
+/*
  * POST - Créer un dossier médical vide avec les infos de base
  */
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
+  console.log("[createMedicalRecord] req.body :", req.body);
   const {
     
     groupeSanguin,
@@ -97,6 +99,8 @@ exports.createMedicalRecord = async (req, res) => {
     statut
   } = req.body;
 
+
+
   // Fonction utilitaire pour convertir string "oui"/"non" ou "true"/"false" en booléen
   function toBool(value) {
     if (typeof value === "string") {
@@ -109,6 +113,7 @@ exports.createMedicalRecord = async (req, res) => {
 
   try {
     const utilisateur = await findUserByEmail(email);
+    console.log("[createMedicalRecord] utilisateur :", utilisateur);
     if (!utilisateur) {
       return res.status(404).json({ message: "Utilisateur non trouvé avec cet email" });
     }
@@ -122,7 +127,7 @@ exports.createMedicalRecord = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-
+console.log("[createMedicalRecord] patientData :", patientData);
     if (patientData.length === 0) {
       return res.status(404).json({ message: "Patient non trouvé pour cet utilisateur" });
     }
@@ -136,7 +141,7 @@ exports.createMedicalRecord = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-
+console.log("[createMedicalRecord] directeurData :", directeurData);
     const statutFinal = directeurData.length > 0 ? "directeur" : patient.categorie;
 
     const [existingDossier] = await db.query(

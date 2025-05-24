@@ -6,7 +6,12 @@ const connection = require("../db");
 const db = connection.promise();
 const { doctorMiddleware } = require("../middlewares/authMiddleware");
 
+const fs = require("fs");
+const pdfParse = require("pdf-parse");
+const extractUsersFromText = require("../utils/pdfParser");
+const Patient = require("../models/authPatientModel");
 
+const { Op } = require("sequelize");
 // demanderRendezVous
 exports.demanderRendezVous = async (req, res) => {
   const { motif } = req.body;
@@ -643,5 +648,80 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de l'annulation de la demande:", error);
     res.status(500).json({ error: "Erreur interne du serveur." });
+  }
+};
+  
+
+
+
+
+exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
+  try {
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const data = await pdfParse(fileBuffer);
+    const lines = extractUsersFromText(data.text);
+
+    const { startDate, interval } = req.body;
+
+    if (!startDate || !interval) {
+      return res.status(400).json({ error: "startDate et interval sont requis" });
+    }
+
+    let dateCursor = new Date(startDate);
+    const intervalMinutes = parseInt(interval);
+    dateCursor.setHours(8, 0, 0, 0); // Commencer à 8h00
+
+    const results = [];
+
+    for (const line of lines) {
+      const parts = line.split(",").map(x => x.trim());
+      const matricule = parts[6];
+
+      if (!matricule) {
+        results.push({ matricule: null, status: "failed", error: "Matricule manquant" });
+        continue;
+      }
+
+      const patient = await Patient.findByMatricule(matricule);
+
+      if (!patient) {
+        results.push({ matricule, status: "failed", error: "Patient introuvable" });
+        continue;
+      }
+
+      // SAUTER PAUSE DE MIDI
+      const currentHour = dateCursor.getHours();
+      if (currentHour >= 12 && currentHour < 14) {
+        dateCursor.setHours(14, 0, 0, 0); // sauter à 14h
+      }
+
+      // PASSER AU JOUR SUIVANT SI > 16H
+      if (currentHour >= 16) {
+        dateCursor.setDate(dateCursor.getDate() + 1);
+        dateCursor.setHours(8, 0, 0, 0);
+      }
+
+      try {
+        await RendezVous.create({
+          id_patient: patient.patientId,
+          date_heure: new Date(dateCursor),
+          statut: "programmé",
+        });
+
+        results.push({ matricule, status: "success", date_heure: new Date(dateCursor) });
+        dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
+      } catch (err) {
+        results.push({ matricule, status: "failed", error: err.message });
+      }
+    }
+
+    fs.unlinkSync(req.file.path);
+
+    res.status(200).json({
+      message: "Programmation des rendez-vous terminée",
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
