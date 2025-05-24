@@ -12,6 +12,7 @@ const patientRoutes = require("./routes/patient_routes");
 const medecinRoutes = require("./routes/medecin_routes");
 const administrateurRoutes = require("./routes/administrateur_routes");
 const directeurRoutes = require("./routes/directeur_routes");
+const notificationRoutes = require("./routes/notification_routes");
 
 app.use(
   cors({
@@ -28,6 +29,7 @@ app.use("/patients", patientRoutes);
 app.use("/medecins", medecinRoutes);
 app.use("/admin", administrateurRoutes);
 app.use("/directeur", directeurRoutes);
+app.use("/notifications", notificationRoutes);
 
 setupSwagger(app);
 

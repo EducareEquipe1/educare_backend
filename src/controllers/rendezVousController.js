@@ -37,13 +37,15 @@ exports.demanderRendezVous = async (req, res) => {
     );
 
     if (patient.length === 0) {
-      return res.status(404).json({ error: "Aucun patient lié à cet utilisateur" });
+      return res
+        .status(404)
+        .json({ error: "Aucun patient lié à cet utilisateur" });
     }
 
     const id_patient = patient[0].id;
 
     // 3. Créer la demande avec date_depot = aujourd'hui
-    const currentDate = new Date().toISOString().split('T')[0]; // format "YYYY-MM-DD"
+    const currentDate = new Date().toISOString().split("T")[0]; // format "YYYY-MM-DD"
 
     const [demandeResult] = await db.execute(
       "INSERT INTO demande (id_patient, motif, date_depot) VALUES (?, ?, ?)",
@@ -54,12 +56,21 @@ exports.demanderRendezVous = async (req, res) => {
     console.log("ID de la demande insérée :", id_demande);
 
     // 4. Créer le rendez-vous lié avec motif + patient + email
-    const id_rdv = await RendezVous.create(id_patient, id_demande, motif, email);
+    const id_rdv = await RendezVous.create(
+      id_patient,
+      id_demande,
+      motif,
+      email
+    );
 
     res.status(201).json({ message: "Rendez-vous demandé", id_rdv });
   } catch (error) {
     console.error("Erreur lors de la demande de rendez-vous:", error);
-    res.status(500).json({ error: `Erreur lors de la demande de rendez-vous: ${error.message}` });
+    res
+      .status(500)
+      .json({
+        error: `Erreur lors de la demande de rendez-vous: ${error.message}`,
+      });
   }
 };
 
@@ -79,17 +90,21 @@ exports.programmerRendezVous = async (req, res) => {
 
     const rdv = rdvRows[0];
 
-    if (rdv.statut !== 'demandé') {
-      return res.status(400).json({ error: "Ce rendez-vous n'est pas en statut demandé." });
+    if (rdv.statut !== "demandé") {
+      return res
+        .status(400)
+        .json({ error: "Ce rendez-vous n'est pas en statut demandé." });
     }
 
     const [userRows] = await db.execute(
       "SELECT id FROM Utilisateur WHERE email = ?",
       [email]
     );
-console.log(email);
+    console.log(email);
     if (userRows.length === 0) {
-      return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
+      return res
+        .status(404)
+        .json({ error: "Utilisateur (patient) non trouvé." });
     }
 
     const id_utilisateur = userRows[0].id;
@@ -100,7 +115,9 @@ console.log(email);
     );
 
     if (patientRows.length === 0) {
-      return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
+      return res
+        .status(404)
+        .json({ error: "Patient non trouvé pour cet utilisateur." });
     }
 
     const id_patient = patientRows[0].id;
@@ -112,23 +129,24 @@ console.log(email);
     );
 
     if (existingRdvRows.length > 0) {
-      return res.status(400).json({ error: "Un autre rendez-vous est déjà programmé à cette date et heure." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Un autre rendez-vous est déjà programmé à cette date et heure.",
+        });
     }
 
     // ✅ Mise à jour du rendez-vous
     await RendezVous.programmer(id_rdv, date_rdv, heure_rdv);
 
     res.status(200).json({ message: "Rendez-vous programmé avec succès." });
-
   } catch (error) {
     console.error("Erreur lors de la programmation du rendez-vous:", error);
     res.status(500).json({ error: "Erreur serveur." });
   }
 };
 
-  
-   
- 
 exports.programmerRendezVousParMedecin = async (req, res) => {
   const { email } = req.params; // Email passé dans l'URL
   const { date_rdv, heure_rdv, motif } = req.body;
@@ -136,7 +154,9 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
   try {
     // 1. Vérification des champs requis
     if (!date_rdv || !heure_rdv || !motif) {
-      return res.status(400).json({ error: "Les champs date, heure et motif sont requis." });
+      return res
+        .status(400)
+        .json({ error: "Les champs date, heure et motif sont requis." });
     }
 
     // 2. Récupérer l'utilisateur par email
@@ -158,7 +178,9 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
     );
 
     if (patientRows.length === 0) {
-      return res.status(404).json({ error: "Aucun patient lié à cet utilisateur." });
+      return res
+        .status(404)
+        .json({ error: "Aucun patient lié à cet utilisateur." });
     }
 
     const id_patient = patientRows[0].id;
@@ -171,7 +193,7 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
 
     if (existingRdvRows.length > 0) {
       return res.status(400).json({
-        error: "Un rendez-vous existe déjà à cette date et cette heure."
+        error: "Un rendez-vous existe déjà à cette date et cette heure.",
       });
     }
 
@@ -185,16 +207,15 @@ exports.programmerRendezVousParMedecin = async (req, res) => {
 
     res.status(201).json({
       message: "Rendez-vous programmé avec succès par le médecin.",
-      id_rdv
+      id_rdv,
     });
-
   } catch (error) {
     console.error("Erreur lors de la programmation par le médecin:", error);
     res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };
 
- // Programmer un rendez-vous depuis le bouton ajouter du calendrier
+// Programmer un rendez-vous depuis le bouton ajouter du calendrier
 exports.programmerDirectementRendezVous = async (req, res) => {
   const { email, date_rdv, heure_rdv, motif, nom, prenom } = req.body;
 
@@ -206,7 +227,9 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     );
 
     if (userRows.length === 0) {
-      return res.status(404).json({ error: "Utilisateur (patient) non trouvé." });
+      return res
+        .status(404)
+        .json({ error: "Utilisateur (patient) non trouvé." });
     }
 
     const id_utilisateur = userRows[0].id;
@@ -218,7 +241,9 @@ exports.programmerDirectementRendezVous = async (req, res) => {
     );
 
     if (patientRows.length === 0) {
-      return res.status(404).json({ error: "Patient non trouvé pour cet utilisateur." });
+      return res
+        .status(404)
+        .json({ error: "Patient non trouvé pour cet utilisateur." });
     }
 
     const id_patient = patientRows[0].id;
@@ -231,7 +256,7 @@ exports.programmerDirectementRendezVous = async (req, res) => {
 
     if (existingRdvRows.length > 0) {
       return res.status(400).json({
-        error: "Un rendez-vous est déjà programmé à cette date et heure."
+        error: "Un rendez-vous est déjà programmé à cette date et heure.",
       });
     }
 
@@ -249,12 +274,14 @@ exports.programmerDirectementRendezVous = async (req, res) => {
       patient: {
         nom,
         prenom,
-        email
-      }
+        email,
+      },
     });
-
   } catch (error) {
-    console.error("Erreur lors de la programmation directe du rendez-vous:", error);
+    console.error(
+      "Erreur lors de la programmation directe du rendez-vous:",
+      error
+    );
     res.status(500).json({ error: "Erreur serveur." });
   }
 };
@@ -325,16 +352,16 @@ exports.programmerDirectementRendezVous = async (req, res) => {
 */
 
 exports.annulerRendezVous = async (req, res) => {
-    const { id_rdv } = req.params;
-    try {
-      await RendezVous.annuler(id_rdv);
-      res.status(200).json({ message: "Rendez-vous annulé" });
-    } catch (error) {
-      console.error("Erreur lors de l'annulation du rendez-vous:", error);
-      res.status(500).json({ error: "Erreur lors de l'annulation" });
-    }
-  };
-  
+  const { id_rdv } = req.params;
+  try {
+    await RendezVous.annuler(id_rdv);
+    res.status(200).json({ message: "Rendez-vous annulé" });
+  } catch (error) {
+    console.error("Erreur lors de l'annulation du rendez-vous:", error);
+    res.status(500).json({ error: "Erreur lors de l'annulation" });
+  }
+};
+
 /*
 exports.terminerRendezVous = async (req, res) => {
   const { id_rdv } = req.params;
@@ -362,7 +389,11 @@ exports.modifierRendezVous = async (req, res) => {
     const rdv = rendezVousRows[0];
 
     if (rdv.statut === "annulé" || rdv.statut === "terminé") {
-      return res.status(400).json({ error: `Impossible de modifier un rendez-vous ${rdv.statut}.` });
+      return res
+        .status(400)
+        .json({
+          error: `Impossible de modifier un rendez-vous ${rdv.statut}.`,
+        });
     }
 
     // Préparer la mise à jour dynamique
@@ -391,61 +422,67 @@ exports.modifierRendezVous = async (req, res) => {
 
     if (updateFields.length === 0) {
       return res.status(400).json({
-        error: "Aucun champ valide à modifier. Veuillez fournir au moins un champ : date, heure, motif ou statut."
+        error:
+          "Aucun champ valide à modifier. Veuillez fournir au moins un champ : date, heure, motif ou statut.",
       });
     }
 
     updateValues.push(id_rendezVous);
 
     await db.execute(
-      `UPDATE rendezVous SET ${updateFields.join(", ")} WHERE id_rendezVous = ?`,
+      `UPDATE rendezVous SET ${updateFields.join(
+        ", "
+      )} WHERE id_rendezVous = ?`,
       updateValues
     );
 
     res.status(200).json({
       message: "Rendez-vous modifié avec succès.",
-      champs_modifiés: updateFields.map(f => f.split(" = ")[0])
+      champs_modifiés: updateFields.map((f) => f.split(" = ")[0]),
     });
-
   } catch (error) {
     console.error("Erreur lors de la modification du rendez-vous:", error);
     res.status(500).json({ error: "Erreur interne du serveur." });
   }
 };
 
- 
 // refuser un rendez vous
 exports.refuserRendezVous = async (req, res) => {
-    const { id_rdv } = req.params;
-  
-    try {
-      // Vérifier si le rendez-vous existe et est en statut "demandé"
-      const [rdv] = await db.execute(
-        "SELECT statut FROM rendezVous WHERE id_rendezVous = ?",
-        [id_rdv]
-      );
-  
-      if (rdv.length === 0) {
-        return res.status(404).json({ error: "Rendez-vous introuvable" });
-      }
-  
-      if (rdv[0].statut !== "demandé") {
-        return res.status(400).json({ error: "Seuls les rendez-vous en statut 'demandé' peuvent être refusés" });
-      }
-  
-      // Mettre à jour le statut à "refusé"
-      await db.execute(
-        "UPDATE rendezVous SET statut = 'refusé' WHERE id_rendezVous = ?",
-        [id_rdv]
-      );
-  
-      res.status(200).json({ message: "Rendez-vous refusé" });
-    } catch (error) {
-      console.error("Erreur lors du refus du rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
+  const { id_rdv } = req.params;
+
+  try {
+    // Vérifier si le rendez-vous existe et est en statut "demandé"
+    const [rdv] = await db.execute(
+      "SELECT statut FROM rendezVous WHERE id_rendezVous = ?",
+      [id_rdv]
+    );
+
+    if (rdv.length === 0) {
+      return res.status(404).json({ error: "Rendez-vous introuvable" });
     }
-  };
-  
+
+    if (rdv[0].statut !== "demandé") {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Seuls les rendez-vous en statut 'demandé' peuvent être refusés",
+        });
+    }
+
+    // Mettre à jour le statut à "refusé"
+    await db.execute(
+      "UPDATE rendezVous SET statut = 'refusé' WHERE id_rendezVous = ?",
+      [id_rdv]
+    );
+
+    res.status(200).json({ message: "Rendez-vous refusé" });
+  } catch (error) {
+    console.error("Erreur lors du refus du rendez-vous:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
 //liste des rendez-vous
 exports.listeRendezVous = async (req, res) => {
   try {
@@ -475,15 +512,17 @@ exports.listeRendezVous = async (req, res) => {
 
     res.status(200).json(rows);
   } catch (error) {
-    console.error("Erreur lors de la récupération des rendez-vous filtrés:", error);
-    res.status(500).json({ error: "Erreur lors de la récupération des rendez-vous." });
+    console.error(
+      "Erreur lors de la récupération des rendez-vous filtrés:",
+      error
+    );
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des rendez-vous." });
   }
 };
 
-
-  
-
-  // Liste des rendez-vous demandés
+// Liste des rendez-vous demandés
 exports.listeRendezVousDemandes = async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -510,56 +549,49 @@ exports.listeRendezVousDemandes = async (req, res) => {
 
     res.status(200).json(rows);
   } catch (error) {
-    console.error("Erreur lors de la récupération des rendez-vous demandés:", error);
-    res.status(500).json({ error: "Erreur lors de la récupération des rendez-vous demandés." });
+    console.error(
+      "Erreur lors de la récupération des rendez-vous demandés:",
+      error
+    );
+    res
+      .status(500)
+      .json({
+        error: "Erreur lors de la récupération des rendez-vous demandés.",
+      });
   }
 };
 
-   
-  // liste des rendez-vous d'un seul patient
+// liste des rendez-vous d'un seul patient
 exports.getRendezVousByPatientEmail = async (req, res) => {
   const { email } = req.params;
 
   try {
-    // 1. Trouver l'utilisateur via son email
-    const [utilisateurRows] = await db.execute(
-      "SELECT id FROM Utilisateur WHERE email = ?",
-      [email]
-    );
-
-    if (utilisateurRows.length === 0) {
-      return res.status(404).json({ message: "Utilisateur non trouvé." });
-    }
-
-    const utilisateur_id = utilisateurRows[0].id;
-
-    // 2. Trouver le patient lié à cet utilisateur
-    const [patientRows] = await db.execute(
-      "SELECT id FROM Patient WHERE utilisateur_id = ?",
-      [utilisateur_id]
-    );
-
-    if (patientRows.length === 0) {
-      return res.status(404).json({ message: "Patient non trouvé." });
-    }
-
-    const patient_id = patientRows[0].id;
-
-    // 3. Récupérer uniquement la date et le motif des rendez-vous
+    // Récupérer les rendez-vous en utilisant l'email du patient
     const [rendezVousRows] = await db.execute(
-      "SELECT date, motif FROM rendezVous WHERE id_patient = ? ORDER BY date DESC",
-      [patient_id]
+      `SELECT r.date, r.motif
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE u.email = ?
+       ORDER BY r.date DESC`,
+      [email]
     );
 
     res.status(200).json(rendezVousRows);
   } catch (error) {
-    console.error("Erreur lors de la récupération des rendez-vous du patient:", error);
-    res.status(500).json({ message: "Erreur serveur lors de la récupération des rendez-vous." });
+    console.error(
+      "Erreur lors de la récupération des rendez-vous du patient:",
+      error
+    );
+    res
+      .status(500)
+      .json({
+        message: "Erreur serveur lors de la récupération des rendez-vous.",
+      });
   }
 };
 
-
-  // liste des demandes de rendez-vous d'un seul patient
+// liste des demandes de rendez-vous d'un seul patient
 exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
   const { email } = req.params;
 
@@ -600,13 +632,20 @@ exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
 
     res.status(200).json(demandesRows);
   } catch (error) {
-    console.error("Erreur lors de la récupération des demandes de rendez-vous du patient:", error);
-    res.status(500).json({ message: "Erreur serveur lors de la récupération des demandes de rendez-vous." });
+    console.error(
+      "Erreur lors de la récupération des demandes de rendez-vous du patient:",
+      error
+    );
+    res
+      .status(500)
+      .json({
+        message:
+          "Erreur serveur lors de la récupération des demandes de rendez-vous.",
+      });
   }
 };
 
-
-  // Annuler une demande non programmée (par le patient)
+// Annuler une demande non programmée (par le patient)
 exports.annulerDemandeNonProgramme = async (req, res) => {
   const { email, id_rdv } = req.params;
 
@@ -624,27 +663,42 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
     const rdv = rdvRows[0];
 
     if (rdv.statut !== "demandé") {
-      return res.status(400).json({ error: "Seules les demandes non programmées peuvent être annulées." });
+      return res
+        .status(400)
+        .json({
+          error: "Seules les demandes non programmées peuvent être annulées.",
+        });
     }
 
     // 2. Vérifier que le rendez-vous appartient bien au patient identifié par l'email
-    const [userRows] = await db.execute("SELECT id FROM Utilisateur WHERE email = ?", [email]);
+    const [userRows] = await db.execute(
+      "SELECT id FROM Utilisateur WHERE email = ?",
+      [email]
+    );
     if (userRows.length === 0) {
       return res.status(404).json({ error: "Utilisateur introuvable." });
     }
 
     const id_utilisateur = userRows[0].id;
 
-    const [patientRows] = await db.execute("SELECT id FROM Patient WHERE utilisateur_id = ?", [id_utilisateur]);
+    const [patientRows] = await db.execute(
+      "SELECT id FROM Patient WHERE utilisateur_id = ?",
+      [id_utilisateur]
+    );
     if (patientRows.length === 0 || patientRows[0].id !== rdv.id_patient) {
-      return res.status(403).json({ error: "Ce rendez-vous ne vous appartient pas." });
+      return res
+        .status(403)
+        .json({ error: "Ce rendez-vous ne vous appartient pas." });
     }
 
     // 3. Supprimer le rendez-vous
-    await db.execute("DELETE FROM rendezVous WHERE id_rendezVous = ?", [id_rdv]);
+    await db.execute("DELETE FROM rendezVous WHERE id_rendezVous = ?", [
+      id_rdv,
+    ]);
 
-    res.status(200).json({ message: "Demande de rendez-vous annulée avec succès." });
-
+    res
+      .status(200)
+      .json({ message: "Demande de rendez-vous annulée avec succès." });
   } catch (error) {
     console.error("Erreur lors de l'annulation de la demande:", error);
     res.status(500).json({ error: "Erreur interne du serveur." });
