@@ -3,6 +3,8 @@ const { cloudinary } = require("../config/cloudinary");
 const multer = require("multer");
 const connection = require("../db");
 const streamifier = require("streamifier");
+const path = require("path");
+const fs = require("fs");
 
 // Multer configuration
 const upload = multer({
@@ -41,139 +43,97 @@ const uploadMiddleware = (req, res, next) => {
 
 const uploadImage = async (req, res) => {
   try {
-    // Debug logging
-    console.log("[DEBUG] Request body:", req.body);
-
-    // Validate request
+    const email = req.body.email;
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No image file uploaded",
-      });
+      return res.status(400).json({ error: "No file uploaded" });
     }
-
-    // Get patientId, handling potential space in key name
-    const patientId = req.body.patientId || req.body["patientId "];
-
-    if (!patientId) {
-      return res.status(400).json({
-        success: false,
-        message: "Patient ID is required",
-        debug: { body: req.body },
-      });
-    }
-
-    // Clean patientId value (remove any whitespace)
-    const cleanPatientId = patientId.toString().trim();
 
     // Upload to Cloudinary
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "educare/patient_photos",
-          resource_type: "image",
-          transformation: [
-            { quality: "auto:best" },
-            { width: 800, crop: "limit" },
-          ],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-
-      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-    });
-
-    // Update database with cleaned patientId
-    const imageUrl = result.secure_url;
-    console.log("[DEBUG] Attempting to update Patient record:", {
-      patientId: cleanPatientId,
-      imageUrl,
-    });
-    await new Promise((resolve, reject) => {
-      const updateQuery = `UPDATE defaultdb.Patient SET photo = ? WHERE id = ?`;
-      console.log("[DEBUG] Executing query:", updateQuery);
-      connection.query(
-        updateQuery,
-        [imageUrl, cleanPatientId],
-        (err, result) => {
-          if (err) {
-            console.error("[DATABASE ERROR]", {
-              error: err,
-              query: updateQuery,
-              parameters: [imageUrl, cleanPatientId],
-              connection: connection.config,
-            });
-            reject(err);
-          } else {
-            console.log("[DEBUG] Update successful:", result);
-            resolve(result);
+    const streamUpload = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "educare/patients",
+            public_id: email.replace(/[@.]/g, "_"),
+            overwrite: true,
+          },
+          (error, result) => {
+            if (result) {
+              resolve(result);
+            } else {
+              reject(error);
+            }
           }
-        }
-      );
-    });
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
 
-    return res.status(200).json({
-      success: true,
-      message: "Image uploaded successfully",
-      data: {
-        url: imageUrl,
-        patientId: cleanPatientId,
-      },
-    });
-  } catch (error) {
-    console.error("[UPLOAD ERROR]", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error processing image upload",
-      error: error.message,
-    });
+    const result = await streamUpload(req.file.buffer);
+
+    // Save the image URL to the user's profile in your DB (use 'photo' column)
+    connection.query(
+      `UPDATE Patient 
+       JOIN Utilisateur ON Patient.Utilisateur_id = Utilisateur.id 
+       SET Patient.photo = ? 
+       WHERE Utilisateur.email = ?`,
+      [result.secure_url, email],
+      (err, dbRes) => {
+        if (err) {
+          return res.status(500).json({
+            error: "Failed to update profile image",
+            details: err.message,
+          });
+        }
+        if (dbRes.affectedRows === 0) {
+          return res
+            .status(404)
+            .json({ error: "No patient found with this email" });
+        }
+        res
+          .status(200)
+          .json({ message: "Image uploaded", imageUrl: result.secure_url });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ error: "Upload failed" });
   }
 };
 
-const getPatientPhoto = asyncHandler(async (req, res) => {
+const getPatientPhoto = async (req, res) => {
   try {
-    const patientId = req.params.id;
-    if (!patientId) {
-      return res.status(400).json({
-        success: false,
-        message: "Patient ID is required",
-      });
-    }
+    const email = req.params.email.trim(); // Trim whitespace
 
-    const cleanPatientId = patientId.toString().trim();
-
-    const [rows] = await connection
-      .promise()
-      .query(`SELECT photo FROM defaultdb.Patient WHERE id = ?`, [
-        cleanPatientId,
-      ]);
-
-    if (!rows.length || !rows[0].photo) {
-      return res.status(404).json({
-        success: false,
-        message: "No photo found for this patient",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        photoUrl: rows[0].photo,
-        patientId: cleanPatientId,
-      },
-    });
-  } catch (error) {
-    console.error("[GET PHOTO ERROR]", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error retrieving patient photo",
-      error: error.message,
-    });
+    connection.query(
+      `SELECT Patient.photo 
+       FROM Patient 
+       JOIN Utilisateur ON Patient.Utilisateur_id = Utilisateur.id 
+       WHERE Utilisateur.email = ?`,
+      [email],
+      (err, results) => {
+        console.log("DB results:", results); // Log DB results
+        if (err) {
+          return res
+            .status(500)
+            .json({ error: "Could not fetch image", details: err.message });
+        }
+        if (!results || results.length === 0) {
+          return res
+            .status(404)
+            .json({ image: null, message: "No patient found with this email" });
+        }
+        if (!results[0].photo) {
+          return res.status(200).json({ image: null });
+        }
+        return res.status(200).json({ image: results[0].photo });
+      }
+    );
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Could not fetch image", details: err.message });
   }
-});
+};
 
 module.exports = {
   uploadMiddleware,
