@@ -30,6 +30,10 @@ const {
   getRendezVousByPatientEmail,
   getDemandesRendezVousByPatientEmail,
 } = require("../controllers/rendezVousController");
+const {
+  getDossierMedicalByPatient,
+} = require("../controllers/dossierMedicalController");
+const { patientAuth } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -72,5 +76,8 @@ router.get(
   "/listedemandesdupatient/:email",
   getDemandesRendezVousByPatientEmail
 );
+
+// Patient fetches their own dossier médical (secured)
+router.get("/dossier-medical/:email", patientAuth, getDossierMedicalByPatient);
 
 module.exports = router;
