@@ -174,12 +174,12 @@ router.get(
   doctorMiddleware,
   fetchMedicamentsForOrdonnance
 );
-/*router.get(
+router.get(
   "/get-consultation/:id",
   authMiddleware,
   doctorMiddleware,
   getConsultationsbyIdController
-);*/
+);
 router.get("/get-patients/", authMiddleware, doctorMiddleware, getAllPatients);
 router.delete(
   "/delete-ordonnance/:id",

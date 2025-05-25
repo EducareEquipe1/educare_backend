@@ -4,20 +4,37 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const db = require("../config/database");
 
 /**
+ * Utilitaire : Convertit "oui"/"non" ou "true"/"false" en booléen
+ */
+function toBool(value) {
+  if (typeof value === "string") {
+    const val = value.toLowerCase();
+    if (val === "oui" || val === "true") return true;
+    if (val === "non" || val === "false") return false;
+  }
+  return Boolean(value);
+}
+
+/**
+ * Utilitaire : Convertit une valeur en nombre ou renvoie null si invalide
+ */
+function number(value) {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
  * GET - Récupérer les infos de base de l'utilisateur (nom, prenom, etc.)
  */
 exports.getUserMedicalInfo = async (req, res) => {
   const { email } = req.params;
- console.log("[getUserMedicalInfo] email reçu :", email);
   try {
     const utilisateur = await findUserByEmail(email);
-    console.log("[getUserMedicalInfo] utilisateur trouvé :", utilisateur);
     if (!utilisateur) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
     const utilisateur_id = utilisateur.id;
-
     const patientData = await db.query(
       "SELECT * FROM Patient WHERE utilisateur_id = ?",
       {
@@ -25,7 +42,7 @@ exports.getUserMedicalInfo = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-console.log("[getUserMedicalInfo] patientData :", patientData);
+
     if (patientData.length === 0) {
       return res.status(404).json({ message: "Patient non trouvé" });
     }
@@ -40,7 +57,7 @@ console.log("[getUserMedicalInfo] patientData :", patientData);
         type: db.QueryTypes.SELECT,
       }
     );
-console.log("[getUserMedicalInfo] directeurData :", directeurData);
+
     if (directeurData.length > 0) {
       statut = "Directeur";
     }
@@ -54,20 +71,16 @@ console.log("[getUserMedicalInfo] directeurData :", directeurData);
       email: utilisateur.email,
     });
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des infos utilisateur:",
-      error
-    );
+    console.error("Erreur:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
-/*
+/**
  * POST - Créer un dossier médical vide avec les infos de base
  */
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
-  console.log("[createMedicalRecord] req.body :", req.body);
   const {
     groupeSanguin,
     numSecuriteSociale,
@@ -98,29 +111,13 @@ exports.createMedicalRecord = async (req, res) => {
     statut,
   } = req.body;
 
-
-
-  // Fonction utilitaire pour convertir string "oui"/"non" ou "true"/"false" en booléen
-  function toBool(value) {
-    if (typeof value === "string") {
-      const val = value.toLowerCase();
-      if (val === "oui" || val === "true") return true;
-      if (val === "non" || val === "false") return false;
-    }
-    return Boolean(value);
-  }
-
   try {
     const utilisateur = await findUserByEmail(email);
-    console.log("[createMedicalRecord] utilisateur :", utilisateur);
     if (!utilisateur) {
-      return res
-        .status(404)
-        .json({ message: "Utilisateur non trouvé avec cet email" });
+      return res.status(404).json({ message: "Utilisateur non trouvé avec cet email" });
     }
 
     const utilisateur_id = utilisateur.id;
-
     const patientData = await db.query(
       "SELECT * FROM Patient WHERE utilisateur_id = ?",
       {
@@ -128,15 +125,12 @@ exports.createMedicalRecord = async (req, res) => {
         type: db.QueryTypes.SELECT,
       }
     );
-console.log("[createMedicalRecord] patientData :", patientData);
+
     if (patientData.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Patient non trouvé pour cet utilisateur" });
+      return res.status(404).json({ message: "Patient non trouvé pour cet utilisateur" });
     }
 
     const patient = patientData[0];
-
     const directeurData = await db.query(
       "SELECT * FROM Directeur WHERE patient_id = ?",
       {
@@ -145,15 +139,9 @@ console.log("[createMedicalRecord] patientData :", patientData);
       }
     );
 
-console.log("[createMedicalRecord] directeurData :", directeurData);
-    const statutFinal = directeurData.length > 0 ? "directeur" : patient.categorie;
+    const statutFinal = directeurData.length > 0 ? "Directeur" : patient.categorie;
 
-
-   
-      directeurData.length > 0 ? "directeur" : patient.categorie;
- 
-
-    const [existingDossier] = await db.query(
+    const existingDossier = await db.query(
       "SELECT * FROM Dossier_Medical WHERE utilisateur_id = ?",
       {
         replacements: [utilisateur_id],
@@ -161,18 +149,9 @@ console.log("[createMedicalRecord] directeurData :", directeurData);
       }
     );
 
-    if (existingDossier) {
-      return res.status(400).json({
-        message: "Un dossier médical existe déjà pour cet utilisateur",
-      });
+    if (existingDossier.length > 0) {
+      return res.status(400).json({ message: "Un dossier médical existe déjà pour cet utilisateur" });
     }
-
-    // Convertir les champs string oui/non en booléens
-    const alcoolBool = toBool(alcool);
-    const tabacFumeBool = toBool(tabac_fume);
-    const ancienFumeBool = toBool(ancien_fume);
-    const tabacChiqueBool = toBool(tabac_chique);
-    const tabacPrisBool = toBool(tabac_pris);
 
     const newDossier = await DossierMedical.create({
       date_creation: new Date(),
@@ -180,18 +159,18 @@ console.log("[createMedicalRecord] directeurData :", directeurData);
       numSecuriteSociale,
       adresse,
       situation_famille,
-      taille,
-      poids,
-      tabac_fume: tabacFumeBool,
-      tabac_fume_nombre,
-      tabac_chique: tabacChiqueBool,
-      tabac_chique_nombre,
-      tabac_pris: tabacPrisBool,
-      tabac_pris_nombre,
-      age_pris,
-      ancien_fume: ancienFumeBool,
+      taille: number(taille),
+      poids: number(poids),
+      tabac_fume: toBool(tabac_fume),
+      tabac_fume_nombre: number(tabac_fume_nombre),
+      tabac_chique: toBool(tabac_chique),
+      tabac_chique_nombre: number(tabac_chique_nombre),
+      tabac_pris: toBool(tabac_pris),
+      tabac_pris_nombre: number(tabac_pris_nombre),
+      age_pris: number(age_pris),
+      ancien_fume: toBool(ancien_fume),
       periode_exposition,
-      alcool: alcoolBool,
+      alcool: toBool(alcool),
       medicaments,
       affectionsCongenitales,
       maladiesGenerales,
@@ -207,15 +186,12 @@ console.log("[createMedicalRecord] directeurData :", directeurData);
     });
 
     res.status(201).json({
-      message:
-        "Dossier médical créé avec succès (informations de base uniquement)",
+      message: "Dossier médical créé avec succès (informations de base uniquement)",
       dossier: newDossier,
     });
   } catch (error) {
-    console.error("Erreur lors de la création du dossier médical:", error);
-    res.status(500).json({
-      message: "Erreur serveur lors de la création du dossier médical",
-    });
+    console.error("Erreur création dossier médical:", error);
+    res.status(500).json({ message: "Erreur serveur lors de la création du dossier médical" });
   }
 };
 
@@ -229,31 +205,24 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Email requis" });
   }
 
-  try {
-    const utilisateur = await findUserByEmail(email);
-    if (!utilisateur) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
-
-    const utilisateur_id = utilisateur.id;
-
-    const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
-
-    if (!dossier) {
-      return res.status(404).json({ message: "Dossier médical non trouvé" });
-    }
-
-    res.status(200).json(dossier);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "Erreur lors de la récupération du dossier médical" });
+  const utilisateur = await findUserByEmail(email);
+  if (!utilisateur) {
+    return res.status(404).json({ message: "Utilisateur non trouvé" });
   }
+
+  const utilisateur_id = utilisateur.id;
+
+  const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
+
+  if (!dossier) {
+    return res.status(404).json({ message: "Dossier médical non trouvé" });
+  }
+
+  res.status(200).json(dossier);
 });
 
 /**
- * PUT - Mettre à jour un dossier médical (par le médecin)
+ * PUT - Mettre à jour un dossier médical
  */
 exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   const { email } = req.params;
@@ -262,37 +231,34 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Email requis" });
   }
 
-  try {
-    const utilisateur = await findUserByEmail(email);
-    if (!utilisateur) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
-
-    const utilisateur_id = utilisateur.id;
-
-    const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
-
-    if (!dossier) {
-      return res.status(404).json({ message: "Dossier médical non trouvé" });
-    }
-
-    await dossier.update(req.body);
-
-    res.status(200).json({
-      message: "Dossier médical mis à jour avec succès",
-      dossier,
-    });
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour du dossier médical:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+  const utilisateur = await findUserByEmail(email);
+  if (!utilisateur) {
+    return res.status(404).json({ message: "Utilisateur non trouvé" });
   }
+
+  const utilisateur_id = utilisateur.id;
+
+  const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
+
+  if (!dossier) {
+    return res.status(404).json({ message: "Dossier médical non trouvé" });
+  }
+
+  await dossier.update(req.body);
+
+  res.status(200).json({
+    message: "Dossier médical mis à jour avec succès",
+    dossier,
+  });
 });
 
+/**
+ * GET - Récupérer le dossier médical d’un patient (patient lui-même)
+ */
 exports.getDossierMedicalByPatient = async (req, res) => {
   const { email } = req.params;
   const tokenEmail = req.user?.email;
 
-  // Only allow access if the token's email matches the requested email
   if (!tokenEmail || tokenEmail !== email) {
     return res.status(403).json({ message: "Accès refusé" });
   }
@@ -312,12 +278,10 @@ exports.getDossierMedicalByPatient = async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ message: "Dossier médical non trouvé" });
     }
+
     res.json(rows[0]);
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération du dossier médical du patient:",
-      error
-    );
+    console.error("Erreur récupération dossier médical:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
