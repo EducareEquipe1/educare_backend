@@ -70,6 +70,14 @@ router.get(
   "/consultations/:consultation_id/has-ordonnance",
   consultationController.hasOrdonnanceForConsultation
 );
+router.get(
+  "/consultations/:consultation_id/examen-medical",
+  consultationController.getExamenMedical
+);
+router.get(
+  "/consultations/:consultation_id/has-examen-medical",
+  consultationController.hasExamenMedicalForConsultation
+);
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
 );
