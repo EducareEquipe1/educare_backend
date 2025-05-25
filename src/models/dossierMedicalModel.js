@@ -133,8 +133,9 @@ const DossierMedical = sequelize.define("Dossier_Medical", {
     allowNull: true,
   },
   statut: {
-    type: DataTypes.ENUM('directeur', 'ATS', 'enseignant', 'etudiant'),
+    type: DataTypes.ENUM('directeur', 'ATS', 'Enseignant', 'Etudiant'),
     allowNull: false,
+    defaultValue: DataTypes.NOW
     
   },
   
