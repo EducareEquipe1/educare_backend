@@ -60,6 +60,24 @@ const {
   deleteConsultation,
 } = require("../models/consultationModel");
 
+const consultationController = require("../controllers/consultationController");
+
+router.get(
+  "/consultations/:consultation_id/medicaments",
+  consultationController.getMedicamentsByConsultationId
+);
+router.get(
+  "/consultations/:consultation_id/has-ordonnance",
+  consultationController.hasOrdonnanceForConsultation
+);
+router.get(
+  "/consultations/:consultation_id/examen-medical",
+  consultationController.getExamenMedical
+);
+router.get(
+  "/consultations/:consultation_id/has-examen-medical",
+  consultationController.hasExamenMedicalForConsultation
+);
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
 );
@@ -164,12 +182,12 @@ router.get(
   doctorMiddleware,
   fetchMedicamentsForOrdonnance
 );
-/*router.get(
+router.get(
   "/get-consultation/:id",
   authMiddleware,
   doctorMiddleware,
   getConsultationsbyIdController
-);*/
+);
 router.get("/get-patients/", authMiddleware, doctorMiddleware, getAllPatients);
 router.delete(
   "/delete-ordonnance/:id",
@@ -258,7 +276,7 @@ const path = require("path");
 // Destination et nom du fichier
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); 
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -266,8 +284,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage }); 
-
+const upload = multer({ storage });
 
 router.post(
   "/bulk-schedule",

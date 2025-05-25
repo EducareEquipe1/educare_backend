@@ -15,6 +15,10 @@ const {
   deleteOrdonnance,
   deleteConsultation,
   getConsultationId,
+  hasOrdonnanceForConsultation,
+  getMedicamentsByConsultationId,
+  hasExamenForConsultation,
+  getExamenMedical,
 } = require("../models/consultationModel");
 exports.createExamenMedical = async (req, res) => {
   const { id } = req.params; // consultation_id
@@ -343,5 +347,87 @@ exports.deleteConsultationController = async (req, res) => {
     return res
       .status(500)
       .json({ error: "Server error while deleting consultation" });
+  }
+};
+exports.getMedicamentsByConsultationId = async (req, res) => {
+  const { consultation_id } = req.params;
+
+  try {
+    const result = await getMedicamentsByConsultationId(consultation_id);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        message: result.message,
+        medicaments: [],
+      });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
+  }
+};
+exports.hasOrdonnanceForConsultation = async (req, res) => {
+  const { consultation_id } = req.params;
+console.log('im in has ordonnonce');
+  try {
+    const result = await hasOrdonnanceForConsultation(consultation_id);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
+  }
+};
+exports.hasExamenMedicalForConsultation = async (req, res) => {
+  const { consultation_id } = req.params;
+  console.log('➡️ Checking if examen medical exists');
+
+  try {
+    const result = await hasExamenForConsultation(consultation_id);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
+  }
+};
+exports.getExamenMedical = async (req, res) => {
+  const { consultation_id } = req.params;
+  console.log('➡️ Fetching examen medical');
+
+  try {
+    const examen = await getExamenMedical(consultation_id);
+
+    if (!examen) {
+      return res.status(404).json({
+        success: false,
+        message: "⚠️ No examen medical found for this consultation.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: examen,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
   }
 };

@@ -172,20 +172,25 @@ exports.ModifyConsultation = (id_consultation, data) => {
 
     const sql = `
       UPDATE Consultation
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE id_consultation = ?
     `;
 
     connection.query(sql, values, (err, result) => {
       if (err) return reject("❌ Error updating consultation: " + err.message);
       if (result.affectedRows === 0) {
-        return resolve({ success: false, message: "⚠️ Consultation not found to update." });
+        return resolve({
+          success: false,
+          message: "⚠️ Consultation not found to update.",
+        });
       }
-      resolve({ success: true, message: "✅ Consultation updated successfully" });
+      resolve({
+        success: true,
+        message: "✅ Consultation updated successfully",
+      });
     });
   });
 };
-
 
 exports.createOrdonnance = async (data) => {
   return new Promise((resolve, reject) => {
@@ -364,9 +369,160 @@ exports.deleteConsultation = async (id_consultation) => {
 
       // Check if any rows were affected (i.e., if any consultation was deleted)
       if (results.affectedRows > 0) {
-        resolve({ success: 'Consultation deleted successfully' });
+        resolve({ success: "Consultation deleted successfully" });
       } else {
-        resolve({ error: 'Consultation not found' });
+        resolve({ error: "Consultation not found" });
+      }
+    });
+  });
+};
+exports.hasOrdonnanceForConsultation = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 1 FROM Ordonnance WHERE consultation_id = ?
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err) return reject("❌ Error checking ordonnance: " + err);
+
+      if (results.length > 0) {
+        resolve({
+          exists: true,
+          message: "✅ Ordonnance exists for this consultation.",
+        });
+      } else {
+        resolve({
+          exists: false,
+          message: "⚠️ No ordonnance found for this consultation.",
+        });
+      }
+    });
+  });
+};
+exports.getMedicamentsByConsultationId = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 
+        mio.medicament_id,
+        mio.duree,
+        m.nom_de_marque,
+        m.forme,
+        m.dosage,
+        m.cond
+      FROM MedicamentsInOrdonnance mio
+      JOIN Ordonnance o ON o.id_ordonnance = mio.ordonnance_id
+      JOIN medicaments m ON m.id = mio.medicament_id
+      WHERE o.consultation_id = ?
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err)
+        return reject("❌ Error fetching medicaments by consultation: " + err);
+
+      if (results.length === 0) {
+        return resolve({
+          success: false,
+          message: "⚠️ No medicaments found for this consultation.",
+          medicaments: [],
+        });
+      }
+
+      resolve({
+        success: true,
+        message: "✅ Medicaments fetched successfully.",
+        medicaments: results,
+      });
+    });
+  });
+};
+exports.hasExamenForConsultation = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 1 FROM Examen_Medical WHERE consultation_id = ?
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err) return reject("❌ Error checking examen medical: " + err);
+
+      if (results.length > 0) {
+        resolve({
+          exists: true,
+          message: "✅ examen medical  exists for this consultation.",
+        });
+      } else {
+        resolve({
+          exists: false,
+          message: "⚠️ No examen medical found for this consultation.",
+        });
+      }
+    });
+  });
+};
+exports.getExamenMedical = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 
+        id,
+        consultation_id,
+        poids,
+        taille,
+        IMC,
+        tension,
+        vision_d,
+        vision_g,
+        larmoiement,
+        douleurs,
+        taches_yeux,
+        audition_d,
+        audition_g,
+        sifflements,
+        angines,
+        epistaxis,
+        rhinorrhee,
+        cephalies,
+        vertiges,
+        troubles_sommeil,
+        peau_normal,
+        peau_anormale,
+        douleurs_musculaires,
+        douleurs_articulaires,
+        douleurs_neurologiques,
+        toux,
+        dyspnee,
+        douleurs_thoraciques,
+        palpitations,
+        oedemes,
+        cyanose,
+        pyrosis,
+        vomissements,
+        douleurs_abdominales,
+        dysurie,
+        hematurie,
+        cycles_irreguliers,
+        fonction_respiratoire,
+        fonction_circulatoire,
+        fonction_motrice,
+        sanguins,
+        urinaires,
+        radiologiques,
+        hepatites_pos,
+        hepatites_neg,
+        syphilis_pos,
+        syphilis_neg,
+        vih_pos,
+        vih_neg
+      FROM Examen_Medical
+      WHERE consultation_id = ?
+      LIMIT 1
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err) return reject("❌ Error retrieving examen medical: " + err);
+
+      if (results.length === 0) {
+        resolve(null); // no exam found
+      } else {
+        resolve(results[0]); // return the exam record
       }
     });
   });
