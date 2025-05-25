@@ -60,6 +60,16 @@ const {
   deleteConsultation,
 } = require("../models/consultationModel");
 
+const consultationController = require("../controllers/consultationController");
+
+router.get(
+  "/consultations/:consultation_id/medicaments",
+  consultationController.getMedicamentsByConsultationId
+);
+router.get(
+  "/consultations/:consultation_id/has-ordonnance",
+  consultationController.hasOrdonnanceForConsultation
+);
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")
 );
@@ -258,7 +268,7 @@ const path = require("path");
 // Destination et nom du fichier
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); 
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -266,8 +276,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage }); 
-
+const upload = multer({ storage });
 
 router.post(
   "/bulk-schedule",

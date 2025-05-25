@@ -371,3 +371,55 @@ exports.deleteConsultation = async (id_consultation) => {
     });
   });
 };
+exports.hasOrdonnanceForConsultation = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 1 FROM Ordonnance WHERE consultation_id = ?
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err) return reject("❌ Error checking ordonnance: " + err);
+
+      if (results.length > 0) {
+        resolve({ exists: true, message: "✅ Ordonnance exists for this consultation." });
+      } else {
+        resolve({ exists: false, message: "⚠️ No ordonnance found for this consultation." });
+      }
+    });
+  });
+};
+exports.getMedicamentsByConsultationId = async (consultation_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT 
+        mio.medicament_id,
+        mio.duree,
+        m.nom_de_marque,
+        m.forme,
+        m.dosage,
+        m.cond
+      FROM MedicamentsInOrdonnance mio
+      JOIN Ordonnance o ON o.id_ordonnance = mio.ordonnance_id
+      JOIN medicaments m ON m.id = mio.medicament_id
+      WHERE o.consultation_id = ?
+    `;
+
+    connection.query(sql, [consultation_id], (err, results) => {
+      if (err) return reject("❌ Error fetching medicaments by consultation: " + err);
+      
+      if (results.length === 0) {
+        return resolve({
+          success: false,
+          message: "⚠️ No medicaments found for this consultation.",
+          medicaments: []
+        });
+      }
+
+      resolve({
+        success: true,
+        message: "✅ Medicaments fetched successfully.",
+        medicaments: results
+      });
+    });
+  });
+};

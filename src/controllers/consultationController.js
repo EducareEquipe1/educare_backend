@@ -15,6 +15,8 @@ const {
   deleteOrdonnance,
   deleteConsultation,
   getConsultationId,
+  hasOrdonnanceForConsultation,
+  getMedicamentsByConsultationId,
 } = require("../models/consultationModel");
 exports.createExamenMedical = async (req, res) => {
   const { id } = req.params; // consultation_id
@@ -343,5 +345,44 @@ exports.deleteConsultationController = async (req, res) => {
     return res
       .status(500)
       .json({ error: "Server error while deleting consultation" });
+  }
+};
+exports.getMedicamentsByConsultationId = async (req, res) => {
+  const { consultation_id } = req.params;
+
+  try {
+    const result = await getMedicamentsByConsultationId(consultation_id);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        message: result.message,
+        medicaments: [],
+      });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
+  }
+};
+exports.hasOrdonnanceForConsultation = async (req, res) => {
+  const { consultation_id } = req.params;
+console.log('im in has ordonnonce');
+  try {
+    const result = await hasOrdonnanceForConsultation(consultation_id);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "❌ Server error: " + error,
+    });
   }
 };
