@@ -124,7 +124,10 @@ exports.createPatient = (patientData, userType) => {
     connection.beginTransaction((err) => {
       if (err) return reject(err);
 
-      const verified = userType === "Admin" || userType === "Medecin";
+      const verified =
+        userType === "Admin" ||
+        userType === "Medecin" ||
+        userType === "Directeur";
 
       const userSql = `
         INSERT INTO Utilisateur (email, password, verified)
@@ -176,23 +179,63 @@ exports.createPatient = (patientData, userType) => {
 
           const patientId = patientResult.insertId;
 
+          // Logic for Directeur
           if (userType === "Directeur") {
             const directeurSql = `
               INSERT INTO Directeur (patient_id)
               VALUES (?);
             `;
-            connection.query(directeurSql, [patientId], (err, directeurResult) => {
-              if (err) return connection.rollback(() => reject(err));
-
-              connection.commit((err) => {
+            connection.query(
+              directeurSql,
+              [patientId],
+              (err, directeurResult) => {
                 if (err) return connection.rollback(() => reject(err));
-                resolve({
-                  utilisateurId,
-                  patientId,
-                  directeurId: directeurResult.insertId,
+
+                connection.commit((err) => {
+                  if (err) return connection.rollback(() => reject(err));
+                  resolve({
+                    utilisateurId,
+                    patientId,
+                    directeurId: directeurResult.insertId,
+                  });
                 });
-              });
-            });
+              }
+            );
+
+            // Logic for Medecin
+          } else if (userType === "Medecin") {
+            const medecinSql = `
+              INSERT INTO Medecin (matricule, speciality, utilisateur_id, nom, prenom, num_tel, date_naissance)
+              VALUES (?, ?, ?, ?, ?, ?, ?);
+            `;
+            const medecinValues = [
+              patientData.matricule,
+              patientData.speciality || null,
+              utilisateurId,
+              patientData.nom,
+              patientData.prenom,
+              patientData.num_tel,
+              patientData.date_naissance,
+            ];
+
+            connection.query(
+              medecinSql,
+              medecinValues,
+              (err, medecinResult) => {
+                if (err) return connection.rollback(() => reject(err));
+
+                connection.commit((err) => {
+                  if (err) return connection.rollback(() => reject(err));
+                  resolve({
+                    utilisateurId,
+                    patientId,
+                    medecinId: medecinResult.insertId,
+                  });
+                });
+              }
+            );
+
+            // All other userTypes
           } else {
             connection.commit((err) => {
               if (err) return connection.rollback(() => reject(err));
@@ -272,7 +315,6 @@ exports.createPatientVerified = (patientData) => {
     });
   });
 };
-
 
 exports.getUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
