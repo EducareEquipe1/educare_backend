@@ -6,7 +6,8 @@ const db = connection.promise();
 const { doctorMiddleware } = require("../middlewares/authMiddleware");
 
 const fs = require("fs");
-const pdfParse = require("pdf-parse");
+const xlsx = require("xlsx");
+
 const extractUsersFromText = require("../utils/pdfParser");
 const Patient = require("../models/authPatientModel");
 
@@ -759,11 +760,16 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
   }
 };
 
-exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
+
+exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
   try {
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const data = await pdfParse(fileBuffer);
-    const lines = extractUsersFromText(data.text);
+    const filePath = req.file.path;
+
+    // 📥 Lecture du fichier Excel
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
     const { startDate, interval } = req.body;
 
@@ -777,27 +783,20 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
 
     const results = [];
 
-    for (const line of lines) {
-      const parts = line.split(",").map(x => x.trim());
-      const email = parts[2]; // email est le 3ᵉ champ (index 2)
+    // ⏭ Sauter la première ligne (en-tête)
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const email = row[2]?.toString().trim(); // 📌 Colonne 3 (index 2)
 
       if (!email) {
-        results.push({
-          email: null,
-          status: "failed",
-          error: "Email manquant",
-        });
+        results.push({ email: null, status: "failed", error: "Email manquant" });
         continue;
       }
 
       const patient = await Patient.findPatientByEmail(email);
 
       if (!patient) {
-        results.push({
-          email,
-          status: "failed",
-          error: "Patient introuvable",
-        });
+        results.push({ email, status: "failed", error: "Patient introuvable" });
         continue;
       }
 
@@ -807,8 +806,9 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
         dateCursor.setHours(8, 0, 0, 0);
       }
 
-      // ⏳ Sauter la pause de midi
       const hour = dateCursor.getHours();
+
+      // ⏳ Sauter la pause de midi
       if (hour >= 12 && hour < 14) {
         dateCursor.setHours(14, 0, 0, 0);
       }
@@ -823,8 +823,7 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
       const fullDate = new Date(dateCursor);
       const dateSQL = fullDate.toISOString().split("T")[0];
       const heureSQL = fullDate.toTimeString().split(":").slice(0, 2).join(":");
-
-      const motif = "contrôle médical"; // ✅ Motif fixe
+      const motif = "contrôle médical";
 
       try {
         await db.execute(
@@ -832,27 +831,22 @@ exports.bulkScheduleAppointmentsFromPDF = async (req, res) => {
           [patient.id, dateSQL, heureSQL, "programmé", email, motif]
         );
 
-        results.push({
-          email,
-          status: "success",
-          date: dateSQL,
-          heure: heureSQL,
-          motif,
-        });
-
+        results.push({ email, status: "success", date: dateSQL, heure: heureSQL, motif });
         dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
       } catch (err) {
         results.push({ email, status: "failed", error: err.message });
       }
     }
 
-    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(filePath);
 
     res.status(200).json({
       message: "Programmation des rendez-vous terminée",
       results,
     });
   } catch (error) {
+    console.error("❌ Erreur bulk scheduling:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
