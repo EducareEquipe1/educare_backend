@@ -17,6 +17,6 @@ router.get("/consultation_stats/:year",getConsultationStats);
 router.get("/getConsultationsParCategorieAnnuelle/:year", getConsultationsParCategorieAnnuelle);
 router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
 router.post("/register",authMiddleware, adminMiddleware, (req, res) => register(req, res, "Directeur"));
-router.get("/getRepartitionPatientsParCategorie",getRepartitionPatientsParCategorie);
+router.get("/getRepartitionPatientsParCategorie/:annee",getRepartitionPatientsParCategorie);
 router.get("/getMaladiesParMois/:annee/:type",getMaladiesParMois);
 module.exports = router; // ✅ Make sure you're exporting the router correctly

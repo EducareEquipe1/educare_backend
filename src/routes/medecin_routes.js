@@ -323,6 +323,6 @@ router.get("/casContagieuse",countMaladiesContagieuses);
 router.get("/consultation_stats/:year",getConsultationStats);
 router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
 router.get("/getMedicamentsPlusPrescrits", getMedicamentsPlusPrescrits);
-router.get("/getRepartitionPatientsParCategorie",getRepartitionPatientsParCategorie);
+router.get("/getRepartitionPatientsParCategorie/:annee",getRepartitionPatientsParCategorie);
 router.post("/ajouterMaladieAuPatient",ajouterMaladieAuPatient );
 module.exports = router;

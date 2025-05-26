@@ -265,23 +265,39 @@ const getMedicamentsPlusPrescrits = async (req, res) => {
 
 const getRepartitionPatientsParCategorie = async (req, res) => {
   try {
+    const { annee } = req.query;
+
+    const year = parseInt(annee);
+    if (isNaN(year)) {
+      return res.status(400).json({ message: "❌ Année invalide" });
+    }
+
+    // Année scolaire = de septembre (année - 1) à mai (année)
+    const startDate = `${year - 1}-09-01`;
+    const endDate = `${year}-05-31`;
+
     const results = await sequelize.query(
       `
       SELECT 
         categorie,
         COUNT(*) AS nombre
       FROM Patient
+      WHERE createdAt BETWEEN :startDate AND :endDate
       GROUP BY categorie
       `,
       {
-        type: QueryTypes.SELECT
+        type: QueryTypes.SELECT,
+        replacements: { startDate, endDate }
       }
     );
 
-    res.status(200).json(results);
+    res.status(200).json({
+      annee_scolaire: `${year - 1}/${year}`,
+      resultats: results
+    });
   } catch (error) {
     console.error("Erreur lors de la récupération de la répartition des patients :", error);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: "Erreur serveur", detail: error.message });
   }
 };
 
