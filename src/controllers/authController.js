@@ -14,6 +14,10 @@ const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 //✅modification Directeur added
 exports.bulkRegisterFromExcel = async (req, res, userType) => {
   try {
+    const isValidEmail = (email) => {
+      return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
+    };
+
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -35,6 +39,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
         sex,
       ] = row.map((x) => (x ? x.toString().trim() : ""));
 
+      // Check for missing fields
       if (
         !email ||
         !last_name ||
@@ -47,6 +52,16 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
         (userType === "Patient" && !sex)
       ) {
         results.push({ email, status: "failed", error: "Missing fields" });
+        continue;
+      }
+
+      // Validate email format
+      if (!isValidEmail(email)) {
+        results.push({ 
+          email, 
+          status: "failed", 
+          error: "Invalid email format. Email must be a valid @esi-sba.dz address" 
+        });
         continue;
       }
 
