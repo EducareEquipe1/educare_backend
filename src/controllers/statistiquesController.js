@@ -194,6 +194,46 @@ const getConsultationsParMois = async (req, res) => {
   }
 };
 
+const getConsultationsParCategorieAnnuelle = async (req, res) => {
+  try {
+    const { year } = req.params;
+
+    if (!year || isNaN(year)) {
+      return res.status(400).json({ error: "⚠️ Année invalide" });
+    }
+
+    const startDate = `${year - 1}-09-01`;
+    const endDate = `${year}-05-31`;
+
+    const results = await sequelize.query(
+      `
+      SELECT 
+        p.categorie AS name, 
+        COUNT(*) AS value
+      FROM Consultation c
+      JOIN Patient p ON c.patient_id = p.id
+      WHERE c.date BETWEEN :startDate AND :endDate
+      GROUP BY p.categorie
+      `,
+      {
+        replacements: { startDate, endDate },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // S'assurer que chaque catégorie est bien présente
+    const categories = ["Etudiant", "Enseignant", "ATS"];
+    const formatted = categories.map(cat => {
+      const found = results.find(r => r.name === cat);
+      return { name: cat, value: found ? found.value : 0 };
+    });
+
+    res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Erreur stats annuelles par catégorie:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
 
 module.exports = {
   countPatients,
@@ -204,4 +244,5 @@ module.exports = {
   hasMaladieForPatient,
   getConsultationStats,
   getConsultationsParMois,
+  getConsultationsParCategorieAnnuelle,
 };

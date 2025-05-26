@@ -314,4 +314,11 @@ router.post(
   upload.single("file"),
   bullkScheduleAppointmentsFromExcel
 );
+const{countPatients,getAnneeUniversitaire,countConsultations,countMaladiesContagieuses,getConsultationStats,getConsultationsParMois}= require("../controllers/statistiquesController");
+router.get("/patientCount",countPatients);
+router.get("/countConsultations",countConsultations);
+router.get("/casContagieuse",countMaladiesContagieuses);
+router.get("/consultation_stats/:year",getConsultationStats);
+
+router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
 module.exports = router;
