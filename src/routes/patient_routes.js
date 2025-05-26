@@ -39,6 +39,7 @@ const {
   getConsultationsbyEmailController,
   fetchMedicamentsForOrdonnance,
   getOrdonnanceByConsultationId, // <-- ADD THIS LINE
+  getExamenMedical, // <-- add this import
 } = require("../controllers/consultationController");
 
 const router = express.Router();
@@ -91,6 +92,10 @@ router.get("/ordonnance/:id", fetchMedicamentsForOrdonnance);
 router.get(
   "/ordonnance/by-consultation/:consultationId",
   getOrdonnanceByConsultationId
+);
+router.get(
+  "/examen-medical/by-consultation/:consultation_id",
+  getExamenMedical
 );
 
 module.exports = router;
