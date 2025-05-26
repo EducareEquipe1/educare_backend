@@ -8,7 +8,7 @@ const {
 } = require("../middlewares/authMiddleware");
 
 const{countPatients,getAnneeUniversitaire,countConsultations,countMaladiesContagieuses,
-  getRepartitionPatientsParCategorie,getConsultationsParCategorieAnnuelle,getConsultationStats
+  getRepartitionPatientsParCategorie,getConsultationsParCategorieAnnuelle,getConsultationStats, getStatsMaladies
   ,getMaladiesParMois,getConsultationsParMois,getStatistiquesMaladiesParTypeEtAnnee}= require("../controllers/statistiquesController");
 router.get("/patientCount",countPatients);
 router.get("/countConsultations",countConsultations);
@@ -20,4 +20,5 @@ router.post("/register",authMiddleware, adminMiddleware, (req, res) => register(
 router.get("/getRepartitionPatientsParCategorie",getRepartitionPatientsParCategorie);
 router.get("/getMaladiesParMois/:annee/:type",getMaladiesParMois);
 router.get("/getStatistiquesMaladiesParTypeEtAnnee/:type/:annee",getStatistiquesMaladiesParTypeEtAnnee);
+router.get("/getStatsMaladies/:type/:annee", getStatsMaladies);
 module.exports = router; // ✅ Make sure you're exporting the router correctly

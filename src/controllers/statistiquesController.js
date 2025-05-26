@@ -399,6 +399,84 @@ const getStatistiquesMaladiesParTypeEtAnnee = async (req, res) => {
 };
 
 
+
+const getStatsMaladies = async (req, res) => {
+  try {
+    // Params depuis l'URL : /stats/:type/:annee
+    const { type, annee } = req.params;
+
+    if (!type || !['cronique', 'contagieuse'].includes(type.toLowerCase())) {
+      return res.status(400).json({ message: "Type invalide, doit être 'cronique' ou 'contagieuse'" });
+    }
+
+    const year = parseInt(annee);
+    if (isNaN(year)) {
+      return res.status(400).json({ message: "Année invalide" });
+    }
+
+    const maladieType = type.toLowerCase();
+
+    const stats = await sequelize.query(`
+  WITH stats_base AS (
+    SELECT
+      m.id AS maladie_id,
+      m.nom AS maladie_nom,
+      p.sex,
+      COUNT(*) AS nb_cas,
+      MONTH(pm.date_diagnostic) AS mois,
+      YEAR(pm.date_diagnostic) AS annee
+    FROM Patient_Maladie pm
+    JOIN Maladie m ON pm.id_maladie = m.id
+    JOIN Patient p ON pm.id_patient = p.id
+    WHERE m.type = :maladieType
+      AND YEAR(pm.date_diagnostic) = :year
+    GROUP BY m.id, m.nom, p.sex, YEAR(pm.date_diagnostic), MONTH(pm.date_diagnostic)
+  ),
+  total_par_maladie AS (
+    SELECT maladie_id, maladie_nom, SUM(nb_cas) AS total_cas
+    FROM stats_base
+    GROUP BY maladie_id, maladie_nom
+  ),
+  repartition_sexe AS (
+    SELECT maladie_id, sex, SUM(nb_cas) AS nb_cas_sexe
+    FROM stats_base
+    WHERE sex IS NOT NULL
+    GROUP BY maladie_id, sex
+  ),
+  pic_mensuel AS (
+    SELECT maladie_id, mois, nb_cas
+    FROM (
+      SELECT maladie_id, mois, SUM(nb_cas) AS nb_cas,
+             ROW_NUMBER() OVER (PARTITION BY maladie_id ORDER BY SUM(nb_cas) DESC) AS rn
+      FROM stats_base
+      GROUP BY maladie_id, mois
+    ) t
+    WHERE rn = 1
+  )
+  SELECT
+    tpm.maladie_id,
+    tpm.maladie_nom AS maladie,
+    tpm.total_cas AS nombre_de_cas,
+    JSON_OBJECTAGG(rs.sex, rs.nb_cas_sexe) AS repartition_sexe,
+    pm.mois AS pic_mensuel
+  FROM total_par_maladie tpm
+  LEFT JOIN repartition_sexe rs ON tpm.maladie_id = rs.maladie_id
+  LEFT JOIN pic_mensuel pm ON tpm.maladie_id = pm.maladie_id
+  GROUP BY tpm.maladie_id, tpm.maladie_nom, tpm.total_cas, pm.mois
+  ORDER BY tpm.total_cas DESC;
+`, {
+  replacements: { maladieType, year },
+  type: QueryTypes.SELECT
+});
+
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Erreur getStatsMaladies:', error);
+    res.status(500).json({ message: 'Erreur serveur', detail: error.message });
+  }
+};
+
+
 module.exports = {
   countPatients,
   getAnneeUniversitaire,
@@ -413,4 +491,5 @@ module.exports = {
   getRepartitionPatientsParCategorie,
   ajouterMaladieAuPatient,getMaladiesParMois,
   getStatistiquesMaladiesParTypeEtAnnee,
+  getStatsMaladies,
 };
