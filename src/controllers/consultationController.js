@@ -373,7 +373,7 @@ exports.getMedicamentsByConsultationId = async (req, res) => {
 };
 exports.hasOrdonnanceForConsultation = async (req, res) => {
   const { consultation_id } = req.params;
-console.log('im in has ordonnonce');
+  console.log("im in has ordonnonce");
   try {
     const result = await hasOrdonnanceForConsultation(consultation_id);
 
@@ -390,7 +390,7 @@ console.log('im in has ordonnonce');
 };
 exports.hasExamenMedicalForConsultation = async (req, res) => {
   const { consultation_id } = req.params;
-  console.log('➡️ Checking if examen medical exists');
+  console.log("➡️ Checking if examen medical exists");
 
   try {
     const result = await hasExamenForConsultation(consultation_id);
@@ -408,7 +408,7 @@ exports.hasExamenMedicalForConsultation = async (req, res) => {
 };
 exports.getExamenMedical = async (req, res) => {
   const { consultation_id } = req.params;
-  console.log('➡️ Fetching examen medical');
+  console.log("➡️ Fetching examen medical");
 
   try {
     const examen = await getExamenMedical(consultation_id);
@@ -429,5 +429,40 @@ exports.getExamenMedical = async (req, res) => {
       success: false,
       message: "❌ Server error: " + error,
     });
+  }
+};
+exports.getOrdonnanceByConsultationId = async (req, res) => {
+  const { consultationId } = req.params;
+  try {
+    // Find the ordonnance for this consultation
+    const [ordRows] = await connection
+      .promise()
+      .execute("SELECT * FROM Ordonnance WHERE consultation_id = ?", [
+        consultationId,
+      ]);
+    if (!ordRows.length) {
+      return res
+        .status(404)
+        .json({ message: "No ordonnance found for this consultation." });
+    }
+    const ordonnance = ordRows[0];
+
+    // Now get the medications
+    const [meds] = await connection.promise().execute(
+      `SELECT m.nom_de_marque AS nom, m.dosage, mio.duree
+       FROM MedicamentsInOrdonnance mio
+       JOIN medicaments m ON mio.medicament_id = m.id
+       WHERE mio.ordonnance_id = ?`,
+      [ordonnance.id_ordonnance]
+    );
+
+    res.status(200).json({
+      ordonnance_id: ordonnance.id_ordonnance,
+      ordonnance_date: ordonnance.date,
+      medicaments: meds,
+    });
+  } catch (error) {
+    console.error("Error fetching ordonnance by consultation:", error);
+    res.status(500).json({ error: "Server error while fetching ordonnance." });
   }
 };

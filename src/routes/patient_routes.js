@@ -37,6 +37,8 @@ const {
 const { patientAuth } = require("../middlewares/authMiddleware");
 const {
   getConsultationsbyEmailController,
+  fetchMedicamentsForOrdonnance,
+  getOrdonnanceByConsultationId, // <-- ADD THIS LINE
 } = require("../controllers/consultationController");
 
 const router = express.Router();
@@ -85,5 +87,10 @@ router.get(
 router.get("/dossier-medical/:email", patientAuth, getDossierMedicalByPatient);
 router.get("/next-rendezvous/:email", getNextRendezVousByPatientEmail);
 router.get("/consultations/:email", getConsultationsbyEmailController);
+router.get("/ordonnance/:id", fetchMedicamentsForOrdonnance);
+router.get(
+  "/ordonnance/by-consultation/:consultationId",
+  getOrdonnanceByConsultationId
+);
 
 module.exports = router;
