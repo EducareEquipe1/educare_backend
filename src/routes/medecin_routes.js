@@ -24,7 +24,7 @@ const {
 
 const {
   searchPatients,
-  searchMedicaments,
+  searchMedicaments,searchMaladies,
 } = require("../controllers/searchControllers");
 
 const {
@@ -40,7 +40,7 @@ const {
   getConsultation,
   listeRendezVousDemandes,
   listeRendezVous,
-  bulkScheduleAppointmentsFromPDF,
+ bullkScheduleAppointmentsFromExcel,
 } = require("../controllers/rendezVousController");
 
 const {
@@ -61,6 +61,11 @@ const {
 } = require("../controllers/statistiquesController.js");
 
 const consultationController = require("../controllers/consultationController");
+
+router.get("/searchMaladies",
+   authMiddleware,
+  doctorMiddleware,
+  searchMaladies);
 
 router.get(
   "/consultations/:consultation_id/medicaments",
@@ -279,9 +284,10 @@ const multer = require("multer");
 const path = require("path");
 
 // Destination et nom du fichier
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, "uploads/"); // Assure-toi que ce dossier existe
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -289,12 +295,33 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+// 🔐 Filtrage pour accepter seulement les .xlsx
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype ===
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error("Seuls les fichiers Excel (.xlsx) sont acceptés"), false);
+  }
+};
+
+const upload = multer({ storage, fileFilter });
 
 router.post(
   "/bulk-schedule",
   upload.single("file"),
-  bulkScheduleAppointmentsFromPDF
+  bullkScheduleAppointmentsFromExcel
 );
-
+const{countPatients,getAnneeUniversitaire,countConsultations,countMaladiesContagieuses,
+  getRepartitionPatientsParCategorie,getMedicamentsPlusPrescrits,getConsultationStats,
+  getConsultationsParMois}= require("../controllers/statistiquesController");
+router.get("/patientCount",countPatients);
+router.get("/countConsultations",countConsultations);
+router.get("/casContagieuse",countMaladiesContagieuses);
+router.get("/consultation_stats/:year",getConsultationStats);
+router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
+router.get("/getMedicamentsPlusPrescrits", getMedicamentsPlusPrescrits);
+router.get("/getRepartitionPatientsParCategorie",getRepartitionPatientsParCategorie);
 module.exports = router;
