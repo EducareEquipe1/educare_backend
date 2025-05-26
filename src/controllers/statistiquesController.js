@@ -302,6 +302,58 @@ const ajouterMaladieAuPatient = async (req, res) => {
 
 
 
+const getMaladiesParMois = async (req, res) => {
+  try {
+    const { type, annee } = req.params;
+
+    if (!["contagieuse", "cronique"].includes(type.toLowerCase())) {
+      return res.status(400).json({ message: "Type de maladie invalide (contagieuse ou cronique)." });
+    }
+
+    const anneeNum = parseInt(annee);
+    if (isNaN(anneeNum)) {
+      return res.status(400).json({ message: "Année invalide." });
+    }
+
+    const startDate = `${anneeNum - 1}-09-01`;
+    const endDate = `${anneeNum}-05-31`;
+
+    const result = await sequelize.query(
+      `
+      SELECT MONTH(pm.date_diagnostic) AS mois, COUNT(*) AS total
+      FROM Patient_Maladie pm
+      JOIN Maladie m ON pm.id_maladie = m.id
+      WHERE m.type = ? AND pm.date_diagnostic BETWEEN ? AND ?
+      GROUP BY MONTH(pm.date_diagnostic)
+      `,
+      {
+        replacements: [type.toLowerCase(), startDate, endDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const moisFr = [
+      "janvier", "février", "mars", "avril", "mai",
+      "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ];
+
+    const moisSelectionnes = [9, 10, 11, 12, 1, 2, 3, 4, 5];
+
+    const formatted = moisSelectionnes.map(mois => {
+      const found = result.find(r => r.mois === mois);
+      return {
+        name: moisFr[mois - 1],
+        value: found ? found.total : 0
+      };
+    });
+
+    res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Erreur:", error);
+    res.status(500).json({ message: "Erreur serveur", detail: error.message });
+  }
+};
+
 
 module.exports = {
   countPatients,
@@ -315,5 +367,5 @@ module.exports = {
   getConsultationsParCategorieAnnuelle,
   getMedicamentsPlusPrescrits,
   getRepartitionPatientsParCategorie,
-  ajouterMaladieAuPatient,
+  ajouterMaladieAuPatient,getMaladiesParMois,
 };
