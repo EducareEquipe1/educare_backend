@@ -281,8 +281,8 @@ exports.transferUtilisateur = async (email) => {
           ];
         } else if (table === "Patient") {
           insertRoleQuery = `
-            INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO archive.Patient (id, utilisateur_id, categorie, matricule, nom, prenom,sex, num_tel, date_naissance, photo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ? ,?)
           `;
           insertParams = [
             role.id,
@@ -623,8 +623,8 @@ exports.restoreUtilisateur = async (email) => {
           ];
         } else if (table === "Patient") {
           insertRoleQuery = `
-            INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, num_tel, date_naissance, photo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Patient (id, utilisateur_id, categorie, matricule, nom, prenom, sex,num_tel, date_naissance, photo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ? ,?)
           `;
           insertParams = [
             role.id,
@@ -633,6 +633,7 @@ exports.restoreUtilisateur = async (email) => {
             role.matricule,
             role.nom,
             role.prenom,
+            role.sex,
             role.num_tel,
             role.date_naissance,
             role.photo,

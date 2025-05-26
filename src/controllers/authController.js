@@ -17,7 +17,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 }); // as array of arrays
+    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
     const results = [];
 
@@ -32,17 +32,19 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
         phone,
         matricule,
         categorie,
+        sex
       ] = row.map((x) => (x ? x.toString().trim() : ""));
 
       if (
-        !email ,
-        !last_name ,
-        !first_name ,
-        !password ,
-        !birth_date, 
-        !phone ,
-        !matricule, 
-        !categorie
+        !email ||
+        !last_name ||
+        !first_name ||
+        !password ||
+        !birth_date ||
+        !phone ||
+        !matricule ||
+        !categorie ||
+        (userType === "Patient" && !sex)
       ) {
         results.push({ email, status: "failed", error: "Missing fields" });
         continue;
@@ -51,7 +53,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
       const exists = await Patient.findUserByEmail(email);
       const archived = await Patient.findUserByEmailArchived(email);
 
-      if (archived , exists) {
+      if (archived || exists) {
         results.push({
           email,
           status: "failed",
@@ -63,19 +65,22 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       try {
-        const newPatient = await Patient.createPatientVerified(
-          {
-            prenom: first_name,
-            nom: last_name,
-            email,
-            password: hashedPassword,
-            date_naissance: birth_date,
-            num_tel: phone,
-            matricule,
-            categorie,
-          },
-          userType
-        );
+        const patientData = {
+          prenom: first_name,
+          nom: last_name,
+          email,
+          password: hashedPassword,
+          date_naissance: birth_date,
+          num_tel: phone,
+          matricule,
+          categorie,
+        };
+
+        if (userType === "Patient") {
+          patientData.sex = sex;
+        }
+
+        const newPatient = await Patient.createPatientVerified(patientData, userType);
 
         results.push({
           email,
@@ -87,7 +92,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
       }
     }
 
-    fs.unlinkSync(req.file.path); // delete temp file
+    fs.unlinkSync(req.file.path);
 
     res.status(200).json({
       message: "📥 Bulk registration from Excel completed",
@@ -97,6 +102,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
     res.status(500).json({ error: "❌ " + error.message });
   }
 };
+
 exports.register = asyncHandler(async (req, res, userType) => {
   const {
     first_name,
@@ -107,15 +113,14 @@ exports.register = asyncHandler(async (req, res, userType) => {
     phone,
     matricule,
     categorie,
+    sex,
   } = req.body;
 
-  // Use a mutable variable for categorie
   let finalCategorie = categorie;
   if (userType === "Directeur") {
     finalCategorie = "Directeur";
   }
 
-  // Field validation
   if (
     !email ||
     !last_name ||
@@ -124,12 +129,11 @@ exports.register = asyncHandler(async (req, res, userType) => {
     !birth_date ||
     !phone ||
     !matricule ||
-    (userType === "Patient" && !finalCategorie)
+    (userType === "Patient" && (!finalCategorie || !sex))
   ) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
-  // Email validation
   const isValidEmail = (email) => {
     return validator.isEmail(email) && email.endsWith("@esi-sba.dz");
   };
@@ -140,7 +144,6 @@ exports.register = asyncHandler(async (req, res, userType) => {
       .json({ error: "Email should be in the right format name@esi-sba.dz" });
   }
 
-  // Check if user exists in main and archived
   const existingPatient = await Patient.findUserByEmail(email);
   const existingPatientArchived = await Patient.findUserByEmailArchived(email);
 
@@ -154,29 +157,28 @@ exports.register = asyncHandler(async (req, res, userType) => {
     return res.status(400).json({ error: "User already exists" });
   }
 
-  // Hash the password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create the user and patient
-  const newPatient = await Patient.createPatient(
-    {
-      prenom: first_name,
-      nom: last_name,
-      email,
-      password: hashedPassword,
-      date_naissance: birth_date,
-      num_tel: phone,
-      matricule,
-      categorie: finalCategorie,
-    },
-    userType
-  );
+  const patientData = {
+    prenom: first_name,
+    nom: last_name,
+    email,
+    password: hashedPassword,
+    date_naissance: birth_date,
+    num_tel: phone,
+    matricule,
+    categorie: finalCategorie,
+  };
 
-  // Create JWT token
+  if (userType === "Patient") {
+    patientData.sex = sex;
+  }
+
+  const newPatient = await Patient.createPatient(patientData, userType);
+
   const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "24h" });
   const activationLink = `https://educare-backend-l6ue.onrender.com/patients/activate/${token}`;
 
-  // Email message logic
   let message;
   if (userType === "Patient") {
     await sendEmail(
@@ -190,13 +192,13 @@ exports.register = asyncHandler(async (req, res, userType) => {
     message = "User registered successfully.";
   }
 
-  // Final response
   res.status(201).json({
     message: message,
     patientId: newPatient.patientId,
     matricule: newPatient.matricule,
   });
 });
+
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;

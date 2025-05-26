@@ -124,8 +124,7 @@ exports.createPatient = (patientData, userType) => {
     connection.beginTransaction((err) => {
       if (err) return reject(err);
 
-      const verified =
-        userType === "Admin" || userType === "Medecin" ? true : false;
+      const verified = userType === "Admin" || userType === "Medecin";
 
       const userSql = `
         INSERT INTO Utilisateur (email, password, verified)
@@ -138,47 +137,62 @@ exports.createPatient = (patientData, userType) => {
 
         const utilisateurId = userResult.insertId;
 
-        const patientSql = `
-          INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel , categorie) 
-          VALUES (?, ?, ?, ?, ?, ? , ?);
-        `;
-        const patientValues = [
-          utilisateurId,
-          patientData.matricule,
-          patientData.nom,
-          patientData.prenom,
-          patientData.date_naissance,
-          patientData.num_tel,
-          patientData.categorie,
-        ];
+        // Dynamically build SQL based on presence of 'sex'
+        const hasSex = patientData.sex !== undefined;
+
+        const patientSql = hasSex
+          ? `
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie, sex)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          `
+          : `
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+          `;
+
+        const patientValues = hasSex
+          ? [
+              utilisateurId,
+              patientData.matricule,
+              patientData.nom,
+              patientData.prenom,
+              patientData.date_naissance,
+              patientData.num_tel,
+              patientData.categorie,
+              patientData.sex,
+            ]
+          : [
+              utilisateurId,
+              patientData.matricule,
+              patientData.nom,
+              patientData.prenom,
+              patientData.date_naissance,
+              patientData.num_tel,
+              patientData.categorie,
+            ];
 
         connection.query(patientSql, patientValues, (err, patientResult) => {
           if (err) return connection.rollback(() => reject(err));
 
           const patientId = patientResult.insertId;
 
-          // If Directeur, insert into Directeur after Patient
           if (userType === "Directeur") {
             const directeurSql = `
               INSERT INTO Directeur (patient_id)
               VALUES (?);
             `;
-            connection.query(
-              directeurSql,
-              [patientId],
-              (err, directeurResult) => {
-                if (err) return connection.rollback(() => reject(err));
+            connection.query(directeurSql, [patientId], (err, directeurResult) => {
+              if (err) return connection.rollback(() => reject(err));
 
-                connection.commit((err) => {
-                  if (err) return connection.rollback(() => reject(err));
-                  resolve({
-                    utilisateurId,
-                    patientId,
-                    directeurId: directeurResult.insertId,
-                  });
+              connection.commit((err) => {
+                if (err) return connection.rollback(() => reject(err));
+                resolve({
+                  utilisateurId,
+                  patientId,
+                  directeurId: directeurResult.insertId,
                 });
-              }
-            );
+              });
+            });
           } else {
             connection.commit((err) => {
               if (err) return connection.rollback(() => reject(err));
@@ -193,6 +207,7 @@ exports.createPatient = (patientData, userType) => {
     });
   });
 };
+
 exports.createPatientVerified = (patientData) => {
   return new Promise((resolve, reject) => {
     connection.beginTransaction((err) => {
@@ -200,7 +215,7 @@ exports.createPatientVerified = (patientData) => {
 
       const userSql = `
         INSERT INTO Utilisateur (email, password, verified)
-        VALUES (?, ?, true); -- auto-verified
+        VALUES (?, ?, true);
       `;
       const userValues = [patientData.email, patientData.password];
 
@@ -209,19 +224,38 @@ exports.createPatientVerified = (patientData) => {
 
         const utilisateurId = userResult.insertId;
 
-        const patientSql = `
-          INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie)
-          VALUES (?, ?, ?, ?, ?, ?, ?);
-        `;
-        const patientValues = [
-          utilisateurId,
-          patientData.matricule,
-          patientData.nom,
-          patientData.prenom,
-          patientData.date_naissance,
-          patientData.num_tel,
-          patientData.categorie,
-        ];
+        const hasSex = patientData.sex !== undefined;
+
+        const patientSql = hasSex
+          ? `
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie, sex)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          `
+          : `
+            INSERT INTO Patient (utilisateur_id, matricule, nom, prenom, date_naissance, num_tel, categorie)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+          `;
+
+        const patientValues = hasSex
+          ? [
+              utilisateurId,
+              patientData.matricule,
+              patientData.nom,
+              patientData.prenom,
+              patientData.date_naissance,
+              patientData.num_tel,
+              patientData.categorie,
+              patientData.sex,
+            ]
+          : [
+              utilisateurId,
+              patientData.matricule,
+              patientData.nom,
+              patientData.prenom,
+              patientData.date_naissance,
+              patientData.num_tel,
+              patientData.categorie,
+            ];
 
         connection.query(patientSql, patientValues, (err, patientResult) => {
           if (err) return connection.rollback(() => reject(err));
@@ -238,6 +272,7 @@ exports.createPatientVerified = (patientData) => {
     });
   });
 };
+
 
 exports.getUtilisateurs = async () => {
   return new Promise((resolve, reject) => {
