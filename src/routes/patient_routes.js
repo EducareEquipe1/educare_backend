@@ -29,6 +29,7 @@ const {
   annulerRendezVous,
   getRendezVousByPatientEmail,
   getDemandesRendezVousByPatientEmail,
+  getNextRendezVousByPatientEmail,
 } = require("../controllers/rendezVousController");
 const {
   getDossierMedicalByPatient,
@@ -79,5 +80,6 @@ router.get(
 
 // Patient fetches their own dossier médical (secured)
 router.get("/dossier-medical/:email", patientAuth, getDossierMedicalByPatient);
+router.get("/next-rendezvous/:email", getNextRendezVousByPatientEmail);
 
 module.exports = router;
