@@ -11,7 +11,7 @@ const{countPatients,getAnneeUniversitaire,countConsultations,countMaladiesContag
 router.get("/patientCount",countPatients);
 router.get("/countConsultations",countConsultations);
 router.get("/casContagieuse",countMaladiesContagieuses);
-router.get("/consultation_stats",getConsultationStats);
+router.get("/consultation_stats/:year",getConsultationStats);
 router.post("/register",authMiddleware, adminMiddleware, (req, res) => register(req, res, "Directeur"));
 router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
 module.exports = router; // ✅ Make sure you're exporting the router correctly

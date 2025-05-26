@@ -106,8 +106,19 @@ const getMaladiesForPatient = async (req, res) => {
 };
 
 
+
+
 const getConsultationStats = async (req, res) => {
   try {
+    const selectedYear = parseInt(req.params.year); // ou req.query.year si tu préfères en query string
+
+    if (isNaN(selectedYear)) {
+      return res.status(400).json({ error: "Année invalide." });
+    }
+
+    const startDate = `${selectedYear - 1}-09-01`;
+    const endDate = `${selectedYear}-05-31`;
+
     await sequelize.query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
     const statistiques = await sequelize.query(
@@ -123,7 +134,7 @@ const getConsultationStats = async (req, res) => {
           SUM(p.categorie = 'ATS') AS ats
         FROM Consultation c
         JOIN Patient p ON c.patient_id = p.id
-        WHERE (MONTH(c.date) BETWEEN 9 AND 12 OR MONTH(c.date) BETWEEN 1 AND 5)
+        WHERE c.date BETWEEN :startDate AND :endDate
         GROUP BY MONTH(c.date), MONTHNAME(c.date), YEAR(c.date)
       ),
       jour_pointe AS (
@@ -133,7 +144,7 @@ const getConsultationStats = async (req, res) => {
           DAYNAME(c.date) AS jour,
           COUNT(*) AS nb
         FROM Consultation c
-        WHERE (MONTH(c.date) BETWEEN 9 AND 12 OR MONTH(c.date) BETWEEN 1 AND 5)
+        WHERE c.date BETWEEN :startDate AND :endDate
         GROUP BY YEAR(c.date), MONTH(c.date), DAYNAME(c.date)
       ),
       jour_max AS (
@@ -151,29 +162,28 @@ const getConsultationStats = async (req, res) => {
       LEFT JOIN jour_max jm ON cpm.annee = jm.annee AND cpm.mois_num = jm.mois_num
       ORDER BY cpm.annee, cpm.mois_num
       `,
-      { type: QueryTypes.SELECT }
+      {
+        replacements: { startDate, endDate },
+        type: QueryTypes.SELECT,
+      }
     );
 
     await sequelize.query("SET SESSION sql_mode=(SELECT CONCAT(@@sql_mode,',ONLY_FULL_GROUP_BY'))");
 
     res.status(200).json(statistiques);
   } catch (error) {
-    console.error("Complete error details:", {
+    console.error("Erreur SQL:", {
       message: error.message,
       sql: error.sql,
-      stack: error.stack
+      stack: error.stack,
     });
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Erreur lors du traitement des statistiques",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
 
-const moisFr = [
-  "janvier", "fevrier", "mars", "avril", "mai", "juin",
-  "juillet", "aout", "septembre", "octobre", "novembre", "decembre"
-];
 const getConsultationsParMois = async (req, res) => {
   const year = parseInt(req.params.annee);
   try {
