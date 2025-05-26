@@ -188,7 +188,7 @@ exports.register = asyncHandler(async (req, res, userType) => {
     categorie: finalCategorie,
   };
 
-  if (userType === "Patient") {
+  if (userType === "Patient" || userType === 'Directeur') {
     patientData.sex = sex;
   }
 
