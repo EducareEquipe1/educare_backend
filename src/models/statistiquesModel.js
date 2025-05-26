@@ -1,5 +1,6 @@
 const connection = require("../db");
-
+const sequelize = require("../config/database");
+const { QueryTypes } = require("sequelize");
 exports.hasMaladieForPatientm = async (id_patient) => {
   return new Promise((resolve, reject) => {
     if (!id_patient || isNaN(id_patient)) {
@@ -79,7 +80,48 @@ exports.getConsultationsParMoisByYear = async (year) => {
 };
 
 
+exports.lierMaladieAuPatient = async (email, id_maladie, date_diagnostic = null) => {
+  if (!email || !id_maladie) {
+    throw new Error("❌ Email et ID de maladie sont requis.");
+  }
 
-// models/Consultation.js
+  // 1. Récupérer l'ID du patient à partir de son email
+  const result = await sequelize.query(
+    `
+    SELECT p.id AS patient_id
+    FROM Patient p
+    JOIN Utilisateur u ON p.utilisateur_id = u.id
+    WHERE u.email = ?
+    `,
+    {
+      replacements: [email],
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  if (result.length === 0) {
+    throw new Error("❌ Aucun patient trouvé avec cet e-mail.");
+  }
+
+  const id_patient = result[0].patient_id;
+
+  // 2. Insérer dans Patient_Maladie
+  await sequelize.query(
+    `
+    INSERT INTO Patient_Maladie (id_patient, id_maladie, date_diagnostic)
+    VALUES (?, ?, ?)
+    `,
+    {
+      replacements: [id_patient, id_maladie, date_diagnostic || new Date()],
+      type: QueryTypes.INSERT,
+    }
+  );
+
+  return { message: "✅ Maladie liée au patient avec succès." };
+};
+
+
+
+
 
 

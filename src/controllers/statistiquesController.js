@@ -5,7 +5,7 @@ const db = connection.promise();
 const sequelize = require("../config/database");
 const {
   getMaladiesForPatientm,
-  hasMaladieForPatientm,getConsultationsParMoisByYear,
+  hasMaladieForPatientm,getConsultationsParMoisByYear,lierMaladieAuPatient,
 } = require("../models/statistiquesModel");
 const statistiquesModel = require("../models/statistiquesModel");
 
@@ -287,6 +287,21 @@ const getRepartitionPatientsParCategorie = async (req, res) => {
 
 
 
+const ajouterMaladieAuPatient = async (req, res) => {
+  try {
+    const { email, id_maladie, date_diagnostic } = req.body;
+
+    const result = await lierMaladieAuPatient(email, id_maladie, date_diagnostic);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de la maladie au patient :", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
 
 module.exports = {
   countPatients,
@@ -300,4 +315,5 @@ module.exports = {
   getConsultationsParCategorieAnnuelle,
   getMedicamentsPlusPrescrits,
   getRepartitionPatientsParCategorie,
+  ajouterMaladieAuPatient,
 };
