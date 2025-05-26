@@ -239,18 +239,51 @@ exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   const utilisateur_id = utilisateur.id;
 
   const dossier = await DossierMedical.findOne({ where: { utilisateur_id } });
-
   if (!dossier) {
     return res.status(404).json({ message: "Dossier médical non trouvé" });
   }
 
-  await dossier.update(req.body);
+  const input = req.body;
+  const updatedFields = {};
+
+  // Conversions conditionnelles : appliquer les utils seulement si les champs existent
+  if ("taille" in input) updatedFields.taille = number(input.taille);
+  if ("poids" in input) updatedFields.poids = number(input.poids);
+
+  if ("tabac_fume" in input) updatedFields.tabac_fume = toBool(input.tabac_fume);
+  if ("tabac_fume_nombre" in input) updatedFields.tabac_fume_nombre = number(input.tabac_fume_nombre);
+
+  if ("tabac_chique" in input) updatedFields.tabac_chique = toBool(input.tabac_chique);
+  if ("tabac_chique_nombre" in input) updatedFields.tabac_chique_nombre = number(input.tabac_chique_nombre);
+
+  if ("tabac_pris" in input) updatedFields.tabac_pris = toBool(input.tabac_pris);
+  if ("tabac_pris_nombre" in input) updatedFields.tabac_pris_nombre = number(input.tabac_pris_nombre);
+
+  if ("age_pris" in input) updatedFields.age_pris = number(input.age_pris);
+  if ("ancien_fume" in input) updatedFields.ancien_fume = toBool(input.ancien_fume);
+  if ("alcool" in input) updatedFields.alcool = toBool(input.alcool);
+
+  // Champs texte/dates/strings : copier tel quel s’ils existent
+  const otherFields = [
+    "groupeSanguin", "numSecuriteSociale", "adresse", "situation_famille",
+    "periode_exposition", "medicaments", "affectionsCongenitales", "maladiesGenerales",
+    "interventionsChirurgicales", "reactionsAllergiques", "notes",
+    "nom", "prenom", "num_tel", "date_naissance", "statut"
+  ];
+
+  for (const field of otherFields) {
+    if (field in input) updatedFields[field] = input[field];
+  }
+
+  // Mise à jour partielle
+  await dossier.update(updatedFields);
 
   res.status(200).json({
     message: "Dossier médical mis à jour avec succès",
     dossier,
   });
 });
+
 
 /**
  * GET - Récupérer le dossier médical d’un patient (patient lui-même)
