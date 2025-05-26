@@ -76,9 +76,9 @@ exports.getUserMedicalInfo = async (req, res) => {
   }
 };
 
-/**
- * POST - Créer un dossier médical vide avec les infos de base
- */
+
+ // POST - Créer un dossier médical vide avec les infos de base
+ 
 exports.createMedicalRecord = async (req, res) => {
   const { email } = req.params;
   const {
@@ -221,9 +221,9 @@ exports.getMedicalRecord = asyncHandler(async (req, res) => {
   res.status(200).json(dossier);
 });
 
-/**
- * PUT - Mettre à jour un dossier médical
- */
+
+// PUT - Mettre à jour un dossier médical
+ 
 exports.updateMedicalRecord = asyncHandler(async (req, res) => {
   const { email } = req.params;
 

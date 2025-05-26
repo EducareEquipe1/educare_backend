@@ -235,6 +235,59 @@ const getConsultationsParCategorieAnnuelle = async (req, res) => {
   }
 };
 
+
+const getMedicamentsPlusPrescrits = async (req, res) => {
+  try {
+    const results = await sequelize.query(
+      `
+      SELECT 
+        m.nom_de_marque AS name,
+        COUNT(mio.medicament_id) AS value
+      FROM MedicamentsInOrdonnance mio
+      JOIN medicaments m ON mio.medicament_id = m.id
+      GROUP BY m.nom_de_marque
+      ORDER BY value DESC
+      LIMIT 10
+      `,
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des médicaments les plus prescrits :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+
+
+const getRepartitionPatientsParCategorie = async (req, res) => {
+  try {
+    const results = await sequelize.query(
+      `
+      SELECT 
+        categorie,
+        COUNT(*) AS nombre
+      FROM Patient
+      GROUP BY categorie
+      `,
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la répartition des patients :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+
+
+
 module.exports = {
   countPatients,
   getAnneeUniversitaire,
@@ -245,4 +298,6 @@ module.exports = {
   getConsultationStats,
   getConsultationsParMois,
   getConsultationsParCategorieAnnuelle,
+  getMedicamentsPlusPrescrits,
+  getRepartitionPatientsParCategorie,
 };
