@@ -24,7 +24,7 @@ const {
 
 const {
   searchPatients,
-  searchMedicaments,
+  searchMedicaments,searchMaladies,
 } = require("../controllers/searchControllers");
 
 const {
@@ -61,6 +61,11 @@ const {
 } = require("../controllers/statistiquesController.js");
 
 const consultationController = require("../controllers/consultationController");
+
+router.get("/searchMaladies",
+   authMiddleware,
+  doctorMiddleware,
+  searchMaladies);
 
 router.get(
   "/consultations/:consultation_id/medicaments",

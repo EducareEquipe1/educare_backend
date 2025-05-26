@@ -1,7 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const sequelize = require("./config/database");
-require("dotenv").config();
+
 const db = require("./db");
 const setupSwagger = require("./middlewares/swagger");
 const cors = require("cors");

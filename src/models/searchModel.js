@@ -86,3 +86,27 @@ exports.searchMedicamentsByName = async (q) => {
     });
   });
 };
+
+exports.searchMaladiesByName = async (q) => {
+  const likeQuery = `%${q}%`;
+
+  const query = `
+    SELECT *
+    FROM maladie
+    WHERE UPPER(nom) LIKE ?
+  `;
+
+  console.log("🔍 Running maladie search with:", likeQuery);
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [likeQuery], (err, results) => {
+      if (err) {
+        console.error("❌ SQL Error:", err);
+        return reject("❌ Error fetching maladies: " + err);
+      }
+
+      console.log("✅ Maladie search successful:", results.length, "results found");
+      resolve(results);
+    });
+  });
+};
