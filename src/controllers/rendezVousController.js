@@ -650,6 +650,53 @@ exports.getRendezVousByPatientEmail = async (req, res) => {
   }
 };
 
+// Get the next upcoming rendez-vous for a patient (for countdown)
+exports.getNextRendezVousByPatientEmail = async (req, res) => {
+  const { email } = req.params;
+  try {
+    // Only future appointments, status = 'programmé'
+    const [rows] = await db.execute(
+      `SELECT r.date, r.heure, r.motif, r.statut
+       FROM rendezVous r
+       INNER JOIN Patient p ON r.id_patient = p.id
+       INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
+       WHERE u.email = ? AND r.statut = 'programmé'
+         AND CONCAT(r.date, ' ', r.heure) >= NOW()
+       ORDER BY r.date ASC, r.heure ASC
+       LIMIT 1`,
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Aucun rendez-vous à venir." });
+    }
+
+    // Combine date and heure into a single ISO string for frontend
+    const rdv = rows[0];
+    const dateTimeStr = `${rdv.date}T${
+      rdv.heure.length === 5 ? rdv.heure : rdv.heure.slice(0, 5)
+    }`;
+    res.status(200).json({
+      date: rdv.date,
+      heure: rdv.heure,
+      motif: rdv.motif,
+      statut: rdv.statut,
+      dateTime: dateTimeStr, // For easier parsing in Flutter
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération du prochain rendez-vous:",
+      error
+    );
+    res
+      .status(500)
+      .json({
+        error:
+          "Erreur serveur lors de la récupération du prochain rendez-vous.",
+      });
+  }
+};
+
 // liste des demandes de rendez-vous d'un seul patient
 exports.getDemandesRendezVousByPatientEmail = async (req, res) => {
   const { email } = req.params;
@@ -760,7 +807,6 @@ exports.annulerDemandeNonProgramme = async (req, res) => {
   }
 };
 
-
 exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
   try {
     const filePath = req.file.path;
@@ -774,7 +820,9 @@ exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
     const { startDate, interval } = req.body;
 
     if (!startDate || !interval) {
-      return res.status(400).json({ error: "startDate et interval sont requis" });
+      return res
+        .status(400)
+        .json({ error: "startDate et interval sont requis" });
     }
 
     let dateCursor = new Date(startDate);
@@ -789,7 +837,11 @@ exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
       const email = row[2]?.toString().trim(); // 📌 Colonne 3 (index 2)
 
       if (!email) {
-        results.push({ email: null, status: "failed", error: "Email manquant" });
+        results.push({
+          email: null,
+          status: "failed",
+          error: "Email manquant",
+        });
         continue;
       }
 
@@ -831,7 +883,13 @@ exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
           [patient.id, dateSQL, heureSQL, "programmé", email, motif]
         );
 
-        results.push({ email, status: "success", date: dateSQL, heure: heureSQL, motif });
+        results.push({
+          email,
+          status: "success",
+          date: dateSQL,
+          heure: heureSQL,
+          motif,
+        });
         dateCursor.setMinutes(dateCursor.getMinutes() + intervalMinutes);
       } catch (err) {
         results.push({ email, status: "failed", error: err.message });
@@ -849,4 +907,3 @@ exports.bullkScheduleAppointmentsFromExcel = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
