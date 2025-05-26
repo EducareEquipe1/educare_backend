@@ -92,7 +92,7 @@ exports.searchMaladiesByName = async (q) => {
 
   const query = `
     SELECT *
-    FROM maladie
+    FROM Maladie
     WHERE UPPER(nom) LIKE ?
   `;
 
