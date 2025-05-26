@@ -628,7 +628,7 @@ exports.getRendezVousByPatientEmail = async (req, res) => {
   try {
     // Récupérer les rendez-vous en utilisant l'email du patient
     const [rendezVousRows] = await db.execute(
-      `SELECT r.date, r.motif r.heure r.statut
+      `SELECT r.date, r.motif, r.heure, r.statut
        FROM rendezVous r
        INNER JOIN Patient p ON r.id_patient = p.id
        INNER JOIN Utilisateur u ON p.utilisateur_id = u.id
