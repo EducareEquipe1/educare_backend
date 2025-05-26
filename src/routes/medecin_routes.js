@@ -56,9 +56,9 @@ const {
   getConsultationsbyIdController,
 } = require("../controllers/consultationController");
 const {
-  deleteOrdonnance,
-  deleteConsultation,
-} = require("../models/consultationModel");
+  hasMaladieForPatient,
+  getMaladiesForPatient,
+} = require("../controllers/statistiquesController.js");
 
 const consultationController = require("../controllers/consultationController");
 
@@ -77,6 +77,11 @@ router.get(
 router.get(
   "/consultations/:consultation_id/has-examen-medical",
   consultationController.hasExamenMedicalForConsultation
+);
+router.get("/has-hasMaladieForPatient/:id_patient", hasMaladieForPatient);
+router.get(
+  "/get-medicaments/:id_patient",
+  getMaladiesForPatient
 );
 router.post("/register", authMiddleware, adminMiddleware, (req, res) =>
   register(req, res, "Medecin")

@@ -12,15 +12,17 @@ const pdfParse = require("pdf-parse");
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 //✅all page
 //✅modification Directeur added
-exports.bulkRegisterFromPDF = async (req, res, userType) => {
+exports.bulkRegisterFromExcel = async (req, res, userType) => {
   try {
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const data = await pdfParse(fileBuffer);
-    const lines = extractUsersFromText(data.text); // Extract text lines
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 }); // as array of arrays
 
     const results = [];
 
-    for (const line of lines) {
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
       const [
         first_name,
         last_name,
@@ -30,29 +32,26 @@ exports.bulkRegisterFromPDF = async (req, res, userType) => {
         phone,
         matricule,
         categorie,
-        
-      ] = line.split(",").map((x) => x.trim());
+      ] = row.map((x) => (x ? x.toString().trim() : ""));
 
-      // Basic validation
       if (
-        !email ||
-        !last_name ||
-        !first_name ||
-        !password ||
-        !birth_date ||
-        !phone ||
-        !matricule ||
+        !email ,
+        !last_name ,
+        !first_name ,
+        !password ,
+        !birth_date, 
+        !phone ,
+        !matricule, 
         !categorie
       ) {
         results.push({ email, status: "failed", error: "Missing fields" });
         continue;
       }
 
-      // Check existing
       const exists = await Patient.findUserByEmail(email);
       const archived = await Patient.findUserByEmailArchived(email);
 
-      if (archived || exists) {
+      if (archived , exists) {
         results.push({
           email,
           status: "failed",
@@ -61,7 +60,6 @@ exports.bulkRegisterFromPDF = async (req, res, userType) => {
         continue;
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
       try {
@@ -89,15 +87,14 @@ exports.bulkRegisterFromPDF = async (req, res, userType) => {
       }
     }
 
-    // Clean up file
-    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(req.file.path); // delete temp file
 
     res.status(200).json({
-      message: "Bulk registration completed",
+      message: "📥 Bulk registration from Excel completed",
       results,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "❌ " + error.message });
   }
 };
 exports.register = asyncHandler(async (req, res, userType) => {
