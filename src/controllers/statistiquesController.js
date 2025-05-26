@@ -5,8 +5,9 @@ const db = connection.promise();
 const sequelize = require("../config/database");
 const {
   getMaladiesForPatientm,
-  hasMaladieForPatientm,
+  hasMaladieForPatientm,getConsultationsParMoisByYear,
 } = require("../models/statistiquesModel");
+const statistiquesModel = require("../models/statistiquesModel");
 
 const countPatients = async (req, res) => {
   try {
@@ -169,6 +170,20 @@ const getConsultationStats = async (req, res) => {
   }
 };
 
+const moisFr = [
+  "janvier", "fevrier", "mars", "avril", "mai", "juin",
+  "juillet", "aout", "septembre", "octobre", "novembre", "decembre"
+];
+const getConsultationsParMois = async (req, res) => {
+  const year = parseInt(req.params.annee);
+  try {
+    const data = await statistiquesModel.getConsultationsParMoisByYear(year);
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: err.toString() });
+  }
+};
+
 
 module.exports = {
   countPatients,
@@ -177,5 +192,6 @@ module.exports = {
   countMaladiesContagieuses,
   getMaladiesForPatient,
   hasMaladieForPatient,
-  getConsultationStats
+  getConsultationStats,
+  getConsultationsParMois,
 };
