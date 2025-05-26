@@ -1,7 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const { register } = require("../controllers/authController");
-const { bulkRegisterFromPDF } = require("../controllers/authController");
+const { bulkRegisterFromExcel } = require("../controllers/authController");
+
 
 // ✅ Import from the correct controller file
 const {
@@ -31,7 +32,7 @@ const { searchUsers } = require("../controllers/searchControllers");
 const upload = multer({ dest: "uploads/" });
 
 router.post("/bulk-register-pdf", upload.single("file"), (req, res) =>
-  bulkRegisterFromPDF(req, res, "Patient")
+  bulkRegisterFromExcel(req, res, "Patient")
 );
 router.post("/register", (req, res) => register(req, res, "Admin"));
 router.get(

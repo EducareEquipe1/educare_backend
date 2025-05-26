@@ -7,7 +7,7 @@ const extractUsersFromText = require("../utils/pdfParser");
 const validator = require("validator");
 const BlacklistToken = require("../models/blacklistTokenModel");
 const fs = require("fs");
-const pdfParse = require("pdf-parse");
+const xlsx = require("xlsx");
 
 const JWT_SECRET = "*;':$S*O%k<gKB7'[6Heh4|J@nb{/!";
 //✅all page
@@ -32,7 +32,7 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
         phone,
         matricule,
         categorie,
-        sex
+        sex,
       ] = row.map((x) => (x ? x.toString().trim() : ""));
 
       if (
@@ -80,7 +80,10 @@ exports.bulkRegisterFromExcel = async (req, res, userType) => {
           patientData.sex = sex;
         }
 
-        const newPatient = await Patient.createPatientVerified(patientData, userType);
+        const newPatient = await Patient.createPatientVerified(
+          patientData,
+          userType
+        );
 
         results.push({
           email,
@@ -198,7 +201,6 @@ exports.register = asyncHandler(async (req, res, userType) => {
     matricule: newPatient.matricule,
   });
 });
-
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
