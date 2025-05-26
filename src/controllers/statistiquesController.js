@@ -265,41 +265,28 @@ const getMedicamentsPlusPrescrits = async (req, res) => {
 
 const getRepartitionPatientsParCategorie = async (req, res) => {
   try {
-    const { annee } = req.query;
-
-    const year = parseInt(annee);
-    if (isNaN(year)) {
-      return res.status(400).json({ message: "❌ Année invalide" });
-    }
-
-    // Année scolaire = de septembre (année - 1) à mai (année)
-    const startDate = `${year - 1}-09-01`;
-    const endDate = `${year}-05-31`;
-
     const results = await sequelize.query(
       `
       SELECT 
         categorie,
         COUNT(*) AS nombre
       FROM Patient
-      WHERE createdAt BETWEEN :startDate AND :endDate
       GROUP BY categorie
       `,
       {
-        type: QueryTypes.SELECT,
-        replacements: { startDate, endDate }
+        type: QueryTypes.SELECT
       }
     );
 
     res.status(200).json({
-      annee_scolaire: `${year - 1}/${year}`,
-      resultats: results
+      repartition: results
     });
   } catch (error) {
     console.error("Erreur lors de la récupération de la répartition des patients :", error);
     res.status(500).json({ error: "Erreur serveur", detail: error.message });
   }
 };
+
 
 
 
@@ -371,6 +358,47 @@ const getMaladiesParMois = async (req, res) => {
 };
 
 
+
+const getStatistiquesMaladiesParTypeEtAnnee = async (req, res) => {
+  try {
+    const { type, annee } = req.params;
+
+    if (!type || !["cronique", "contagieuse"].includes(type.toLowerCase())) {
+      return res.status(400).json({ message: "❌ Type de maladie invalide (cronique ou contagieuse)" });
+    }
+
+    const year = parseInt(annee);
+    if (isNaN(year)) {
+      return res.status(400).json({ message: "❌ Année invalide" });
+    }
+
+    const startDate = `${year - 1}-09-01`;
+    const endDate = `${year}-05-31`;
+
+    const maladies = await sequelize.query(`
+      SELECT m.nom AS name, COUNT(DISTINCT pm.id_patient) AS value
+      FROM Maladie m
+      JOIN Patient_Maladie pm ON m.id = pm.id_maladie
+      WHERE m.type = :type
+        AND pm.date_diagnostic BETWEEN :startDate AND :endDate
+      GROUP BY m.nom
+      ORDER BY value DESC;
+    `, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: { type: type.toLowerCase(), startDate, endDate }
+    });
+
+    res.status(200).json({ type: type.toLowerCase(), annee: year, maladies });
+  } catch (error) {
+    console.error("Erreur statistiques maladies par type :", error);
+    res.status(500).json({
+      message: "Erreur serveur",
+      detail: error.message
+    });
+  }
+};
+
+
 module.exports = {
   countPatients,
   getAnneeUniversitaire,
@@ -384,4 +412,5 @@ module.exports = {
   getMedicamentsPlusPrescrits,
   getRepartitionPatientsParCategorie,
   ajouterMaladieAuPatient,getMaladiesParMois,
+  getStatistiquesMaladiesParTypeEtAnnee,
 };
