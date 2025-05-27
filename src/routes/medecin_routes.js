@@ -315,8 +315,9 @@ router.post(
   bullkScheduleAppointmentsFromExcel
 );
 const{countPatients,getAnneeUniversitaire,countConsultations,countMaladiesContagieuses,
-  getRepartitionPatientsParCategorie,getMedicamentsPlusPrescrits,getConsultationStats,
-  getConsultationsParMois}= require("../controllers/statistiquesController");
+ getRepartitionPatientsParCategorie,getMedicamentsPlusPrescrits,getConsultationStats,ajouterMaladieAuPatient,
+ getMaladiesParMois,getStatistiquesMaladiesParTypeEtAnnee,
+  getConsultationsParMois,getStatsMaladies}= require("../controllers/statistiquesController");
 router.get("/patientCount",countPatients);
 router.get("/countConsultations",countConsultations);
 router.get("/casContagieuse",countMaladiesContagieuses);
@@ -324,4 +325,9 @@ router.get("/consultation_stats/:year",getConsultationStats);
 router.get("/getConsultationsParMois/:annee",getConsultationsParMois);
 router.get("/getMedicamentsPlusPrescrits", getMedicamentsPlusPrescrits);
 router.get("/getRepartitionPatientsParCategorie",getRepartitionPatientsParCategorie);
+router.post("/ajouterMaladieAuPatient",ajouterMaladieAuPatient );
+router.get("/getMaladiesParMois/:annee/:type",getMaladiesParMois);
+router.get("/getStatistiquesMaladiesParTypeEtAnnee/:type/:annee",getStatistiquesMaladiesParTypeEtAnnee);
+router.get("/getStatsMaladies/:type/:annee", getStatsMaladies);
+
 module.exports = router;
