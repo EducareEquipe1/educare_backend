@@ -375,7 +375,7 @@ const getStatistiquesMaladiesParTypeEtAnnee = async (req, res) => {
     const startDate = `${year - 1}-09-01`;
     const endDate = `${year}-05-31`;
 
-    const maladies = await sequelize.query(`
+    const result = await sequelize.query(`
       SELECT m.nom AS name, COUNT(DISTINCT pm.id_patient) AS value
       FROM Maladie m
       JOIN Patient_Maladie pm ON m.id = pm.id_maladie
@@ -388,7 +388,8 @@ const getStatistiquesMaladiesParTypeEtAnnee = async (req, res) => {
       replacements: { type: type.toLowerCase(), startDate, endDate }
     });
 
-    res.status(200).json({ type: type.toLowerCase(), annee: year, maladies });
+    // Renvoie un tableau de { name, value }
+    res.status(200).json(result);
   } catch (error) {
     console.error("Erreur statistiques maladies par type :", error);
     res.status(500).json({
@@ -397,6 +398,8 @@ const getStatistiquesMaladiesParTypeEtAnnee = async (req, res) => {
     });
   }
 };
+
+
 
 
 
